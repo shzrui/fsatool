@@ -1,480 +1,478 @@
 module tpt
   use util
-  use mod_global, only: procid, nstate, ncluster, startstate, endstate, resultdir, max_str_len
-  use fileio, only: stateindex, maptomacro => states_to_cluster
-  use math, only: math_tpm_pi, math_inv
-  use markov, only: tpm, pi=>limitpi
+  use GlobalVariable, only: procId, nstate, startState, endState, resultDir, MaxStringLen
+  use fileio, only: stateIndex, clusterMapToMacroIndex => states_to_cluster
+  use math, only: MathGetTPMPi, MathMatrixInverse
+  use markov, only: tpm, pi=>limitpi, tcmDim
   implicit none
-  integer :: num_path
-  integer, parameter :: max_state_num = 10
+  integer :: numberPathWay
+  integer, parameter :: maxStateNumber = 10
   integer, allocatable :: Astate(:), Bstate(:)
-  integer, allocatable :: strong_pathway(:)
-  integer, pointer :: sendstate(:), recv_state(:)
-  integer :: num_state_inA, num_state_inB
-  real*8 :: totalflux,kab
-  real*8,dimension(:,:),allocatable :: mfpt, netflux, flux, macro_net_flux
-  real*8,dimension(:),allocatable :: forward_committor, backward_committor
+  integer, allocatable :: strongestPathways(:)
+  integer, pointer :: sendStatePointer(:), recvStatePointer(:)
+  integer :: numStatesInA, numStatesInB
+  real*8 :: totalFlux,kAB
+  real*8,dimension(:,:),allocatable :: mfpt, netFlux, flux, macroNetFlux
+  real*8,dimension(:),allocatable :: forwardCommittor, backwardCommittor
   type :: pathwayinfo
      real*8 :: flux
      integer :: nodes
      integer, allocatable :: pathway(:)
-     real*8 :: fluxratio
+     real*8 :: fluxRatio
   end type pathwayinfo
   TYPE(pathwayinfo), allocatable, dimension(:) :: pathways
 contains
 
-  subroutine mod_tpt(inputfile, outputfile)
-    character(max_str_len) :: inputfile, outputfile
-    if(procid > 0) return
-    startstate = 0; endstate = 0
-    call tpt_readfile(inputfile)
-    call assign_states()
-    allocate (flux(size(tpm, 1), size(tpm, 1)), macro_net_flux(nstate, nstate))
-    resultdir = "./"
-    call tpt_analyze(outputfile)
-  end subroutine mod_tpt
+  subroutine ModTPT(inputFile, outputfile)
+    character(MaxStringLen) :: inputFile, outputfile
+    if(procId > 0) return
+    startState = 0; endState = 0
+    call TPTModReadFile(inputFile)
+    call TPTAssignStates()
+    allocate (flux(size(tpm, 1), size(tpm, 1)), macroNetFlux(nstate, nstate))
+    resultDir = "./"
+    call TPTCalculatePathway(outputfile)
+  end subroutine ModTPT
 
-  subroutine tpt_msm_analysis()
+  subroutine TPTAnalysis()
     integer :: i
-    if(procid>0) return
-    stateindex(1) = 1
+    if(procId>0) return
+    stateIndex(1) = 1
     do i = 2, nstate + 1
-      stateindex(i) = stateindex(i) + 1
+      stateIndex(i) = stateIndex(i) + 1
     enddo
-    call assign_states()
-    allocate(flux(size(tpm, 1), size(tpm, 1)), macro_net_flux(nstate, nstate))
-    call tpt_analyze()
+    call TPTAssignStates()
+    allocate(flux(size(tpm, 1), size(tpm, 1)), macroNetFlux(nstate, nstate))
+    call TPTCalculatePathway()
   end subroutine
 
-  subroutine tpt_readfile(infile)
-    character(max_str_len) :: infile, tpmfile, statefile
-    logical :: read_pi
-    integer :: i, j, prev_temp, iofile, ierr
+  subroutine TPTModReadFile(inputFile)
+    character(MaxStringLen) :: inputFile, tpmFile, statesFile
+    logical :: readPi, calculateMFPT
+    integer :: i, j, prevIntegerTemp, ioFile, ierr
     integer :: temp 
-    namelist /tpt/ tpmfile, statefile, startstate, endstate, nstate, read_pi
+    namelist /tpt/ tpmFile, statesFile, startState, endState, nstate, readPi, calculateMFPT
 
-    statefile = ""
-    read_pi = .true.
+    statesFile = ""
+    readPi = .true.
+    calculateMFPT = .true.
 
-    if (procid  > 0) return
-    call getfreeunit(iofile)
-    open(unit=iofile, file=trim(infile), action="read")
-    read(iofile, nml=tpt,iostat=ierr)
-    if (ierr<0) call errormsg("error in reading the tpt namelist")
-    close(iofile)
+    if (procId  > 0) return
+    call GetFreeUnit(ioFile)
+    open(unit=ioFile, file=trim(inputFile), action="read")
+    read(ioFile, nml=tpt,iostat=ierr)
+    if (ierr<0) call ErrorMessage("error in reading the tpt namelist")
+    close(ioFile)
 
-    if (statefile == "") then
-      ncluster = nstate
+    if (statesFile == "") then
+      tcmDim = nstate
     else
-      call getfreeunit(iofile)
-      open(unit=iofile, file=trim(statefile), action="read")
+      call GetFreeUnit(ioFile)
+      open(unit=ioFile, file=trim(statesFile), action="read")
       i = 0
       do
-        read(iofile, *, iostat=ierr) nstate
         i = i + 1
+        read(ioFile, *, iostat=ierr)
         if (ierr < 0) exit
       enddo
-      ncluster = i - 1
-      close(iofile)
+      tcmDim = i - 1
+      close(ioFile)
     endif
 
-    allocate(tpm(ncluster, ncluster), pi(ncluster), stateindex(nstate+1), maptomacro(ncluster))
-    if(allocated(netflux)) deallocate(netflux)
-    allocate(netflux(ncluster, ncluster))
+    allocate(tpm(tcmDim, tcmDim), pi(tcmDim), stateIndex(nstate+1), clusterMapToMacroIndex(tcmDim))
+    if(allocated(netFlux)) deallocate(netFlux)
+    allocate(netFlux(tcmDim, tcmDim))
 
-    call getfreeunit(iofile)
-    open(unit=iofile, file=trim(tpmfile), action="read")
+    call GetFreeUnit(ioFile)
+    open(unit=ioFile, file=trim(tpmFile), action="read")
 
-    if (read_pi) read(iofile, *) pi
-    do i = 1, ncluster
-      read(iofile, *) tpm(i, :)
+    if (readPi) read(ioFile, *) pi
+    do i = 1, tcmDim
+      read(ioFile, *) tpm(i, :)
     enddo
-    close(iofile)
+    close(ioFile)
 
-    if (.not. read_pi) call math_tpm_pi(tpm, ncluster, pi)
+    if (.not. readPi) call MathGetTPMPi(tpm, tcmDim, pi)
 
-    if (statefile /= "") then
-      call getfreeunit(iofile)
-      open(unit=iofile, file=trim(statefile), action="read")
-      prev_temp = 1; j = 1; stateindex(j) = 1
-      do i = 1, ncluster
-        read(iofile, *) temp, maptomacro(i)
-        if (temp /= prev_temp) then 
-          prev_temp = temp
+    if (statesFile /= "") then
+      call GetFreeUnit(ioFile)
+      open(unit=ioFile, file=trim(statesFile), action="read")
+      prevIntegerTemp = 1; j = 1; stateIndex(j) = 1
+      do i = 1, tcmDim
+        read(ioFile, *) temp, clusterMapToMacroIndex(i)
+        if (temp /= prevIntegerTemp) then 
+          prevIntegerTemp = temp
           j = j + 1
-          stateindex(j) = i
+          stateIndex(j) = i
         endif
       enddo
-      stateindex(j+1) = ncluster+1
-      close(iofile)
+      stateIndex(j+1) = tcmDim+1
+      close(ioFile)
     else
-      stateindex(1) = 1
-      do i = 1, ncluster
-        maptomacro(i) = i
-        stateindex(i+1) = i+1
+      stateIndex(1) = 1
+      do i = 1, tcmDim
+        clusterMapToMacroIndex(i) = i
+        stateIndex(i+1) = i+1
       enddo
     endif
   end subroutine
 
-  subroutine assign_states()
+  subroutine TPTAssignStates()
     integer :: i, j, k, count
     count = 0
     ! count number of cluster in Astate
-    do i = 1,  max_state_num
-      if (startstate(i) /= 0) then
-        count = count + stateindex(startstate(i)+1) - stateindex(startstate(i))
+    do i = 1,  maxStateNumber
+      if (startState(i) /= 0) then
+        count = count + stateIndex(startState(i)+1) - stateIndex(startState(i))
       else
         exit
       endif
     enddo
     allocate(Astate(count))
-    sendstate => startstate(1:i-1)
-    num_state_inA = i - 1
+    sendStatePointer => startState(1:i-1)
+    numStatesInA = i - 1
 
     !count number of cluster in Bstate
     count = 0
-    do i = 1, max_state_num
-      if (endstate(i) /= 0) then
-        count = count + stateindex(endstate(i)+1) - stateindex(endstate(i))
+    do i = 1, maxStateNumber
+      if (endState(i) /= 0) then
+        count = count + stateIndex(endState(i)+1) - stateIndex(endState(i))
       else
         exit
       endif
     enddo
     allocate(Bstate(count))
-    recv_state => endstate(1:i-1)
-    num_state_inB = i - 1
+    recvStatePointer => endState(1:i-1)
+    numStatesInB = i - 1
 
     ! Given the c
     j = 1
-    do k = 1, max_state_num
-      if(startstate(k) /= 0) then
-        do i = stateindex(startstate(k)), stateindex(startstate(k)+1) - 1
-          Astate(j) = maptomacro(i)
+    do k = 1, maxStateNumber
+      if(startState(k) /= 0) then
+        do i = stateIndex(startState(k)), stateIndex(startState(k)+1) - 1
+          Astate(j) = clusterMapToMacroIndex(i)
           j = j + 1
         enddo
       endif
     enddo
 
     j = 1
-    do k = 1, max_state_num
-      if(endstate(k) /= 0) then
-        do i = stateindex(endstate(k)), stateindex(endstate(k)+1)-1
-          Bstate(j) = maptomacro(i)
+    do k = 1, maxStateNumber
+      if(endState(k) /= 0) then
+        do i = stateIndex(endState(k)), stateIndex(endState(k)+1)-1
+          Bstate(j) = clusterMapToMacroIndex(i)
           j = j + 1
         enddo
       endif
     enddo
   end subroutine
 
-  subroutine tpt_analyze(outputfile)
-    character(max_str_len), optional :: outputfile
-    integer :: i, iofile
-    character(max_str_len) :: resultfile = "macro_net_flux.txt"
+  subroutine TPTCalculatePathway(outputfile)
+    character(MaxStringLen), optional :: outputfile
+    integer :: i, ioFile
+    character(MaxStringLen) :: resultFile = "macroNetFlux.txt"
     
-    if (present(outputfile)) resultfile = outputfile
-    call loginfo("TPT Analysis")
-    call tpt_flux(tpm, size(tpm, 1), Astate, Bstate, flux, reversible=.false., pi=pi)
-    call coarse_grain_flux(flux, macro_net_flux)
-    call tpt_extract_pathways(macro_net_flux, num_path, sendstate, recv_state, totalflux)
-    call printinfo(num_path)
-    call getfreeunit(iofile)
+    if (present(outputfile)) resultFile = outputfile
+    call LogInfo("TPT Analysis")
+    call TPTGetFlux(tpm, size(tpm, 1), Astate, Bstate, flux, reversible=.false., pi=pi)
+    call TPTCoarseGrainFlux(flux, macroNetFlux)
+    call TPTExtractPathWays(macroNetFlux, numberPathWay, sendStatePointer, recvStatePointer, totalFlux)
+    call TPTPrintResult(numberPathWay)
+    call GetFreeUnit(ioFile)
 
-    open(unit=iofile, file= trim(resultdir) //"/" // resultfile, action="write")
-    do i = 1, size(macro_net_flux ,1)
-      write(iofile, "(100f12.9)") macro_net_flux(i, :)
+    open(unit=ioFile, file= trim(resultDir) //"/" // resultFile, action="write")
+    do i = 1, size(macroNetFlux ,1)
+      write(ioFile, "(100f12.9)") macroNetFlux(i, :)
     enddo
-    close(iofile)
-    call loginfo()
+    close(ioFile)
+    call LogInfo()
   end subroutine
 
-  subroutine printinfo(num_path)
-    integer :: num_path 
+  subroutine TPTPrintResult(numberPathWay)
+    integer :: numberPathWay 
     integer :: i
-    real*8 :: accumratio
-    real*8,allocatable :: temp_array(:)
-    integer, allocatable :: sortindex(:)
+    real*8 :: accumulatedfluxRatio
+    real*8,allocatable :: tempDoubleArray(:)
+    integer, allocatable :: sortIndex(:)
 
-    write(*, "(a, I8)") "number of micro state: ", ncluster
+    write(*, "(a, I8)") "number of micro state: ", tcmDim
     write(*, "(a, I5)")"number of macro state: ", nstate
-    write(*, "(a, 10I4)") "int state: ", startstate(1:num_state_inA)
-    write(*, "(a, 10I4)")"end state: ", endstate(1:num_state_inB)
-    write(*, "(a, 50f12.8)")"forward committor: ",forward_committor(:)
-    write(*, "(a, 500f12.8)")"backward committor: ",backward_committor(:)
+    write(*, "(a, 10I4)") "int state: ", startState(1:numStatesInA)
+    write(*, "(a, 10I4)")"end state: ", endState(1:numStatesInB)
+    write(*, "(a, 50f12.8)")"forward committor: ",forwardCommittor(:)
+    write(*, "(a, 500f12.8)")"backward committor: ",backwardCommittor(:)
     write(*, "(a, 50f10.6)")"pi: ", pi
-    write(*, "(a, f12.8)")"totalflux: ", totalflux
-    write(*, "(a, f12.8)")"kab: ", kab
-    write(*, "(a, I3, a)")"There are total ", num_path, " pathways in the network"
-    allocate(temp_array(num_path), sortindex(num_path))
-    do i = 1, num_path
-        temp_array(i) = pathways(i) % fluxratio
-        sortindex(i) = i
+    write(*, "(a, f12.8)")"totalFlux: ", totalFlux
+    write(*, "(a, f12.8)")"kAB: ", kAB
+    write(*, "(a, I3, a)")"There are total ", numberPathWay, " pathways in the network"
+    allocate(tempDoubleArray(numberPathWay), sortIndex(numberPathWay))
+    do i = 1, numberPathWay
+        tempDoubleArray(i) = pathways(i) % fluxRatio
+        sortIndex(i) = i
     enddo
-   ! numpath is not so big, so using simple sort to return sortindex
-    accumratio = 0d0
-    call get_feature_index(temp_array, num_path, sortindex)
-    write(*, "(a, 5x, a, 2x, a, 2x, a)") "flux", "ratio", "accumratio", "pathway"
-    do i = 1, num_path
-      accumratio = accumratio + pathways(sortindex(i))%fluxratio
-      write(*, "(E12.4, 2f8.4, 3x, 20I3)") pathways(sortindex(i))%flux, pathways(sortindex(i)) %fluxratio, &
-      & accumratio, pathways(sortindex(i))%pathway
+   ! numpath is not so big, so using simple sort to return sortIndex
+    accumulatedfluxRatio = 0d0
+    call TPTGetFeatureIndex(tempDoubleArray, numberPathWay, sortIndex)
+    write(*, "(a, 5x, a, 2x, a, 2x, a)") "flux", "ratio", "accumulatedfluxRatio", "pathway"
+    do i = 1, numberPathWay
+      accumulatedfluxRatio = accumulatedfluxRatio + pathways(sortIndex(i))%fluxRatio
+      write(*, "(E12.4, 2f8.4, 3x, 20I3)") pathways(sortIndex(i))%flux, pathways(sortIndex(i)) %fluxRatio, &
+      & accumulatedfluxRatio, pathways(sortIndex(i))%pathway
     enddo
   end subroutine
 
-  subroutine tpt_flux(p, num_state, initstate, endstate, flux, reversible, pi)
-    integer,intent(in) :: num_state
-    real*8, intent(in):: p(num_state, num_state)
-    real*8, intent(out) :: flux(num_state, num_state)
+  subroutine TPTGetFlux(p, numberOfState, fromState, toState, flux, reversible, pi)
+    integer,intent(in) :: numberOfState
+    real*8, intent(in):: p(numberOfState, numberOfState)
+    real*8, intent(out) :: flux(numberOfState, numberOfState)
     logical, optional :: reversible
     real*8, dimension(:), optional :: pi
-    integer, dimension(:) :: initstate, endstate
-    real*8 :: lhs(num_state, num_state), rhs(num_state)
-    real*8 :: subpi(num_state)
-    integer :: i, j, ipiv(num_state), info
+    integer, dimension(:) :: fromState, toState
+    real*8 :: lhs(numberOfState, numberOfState), rhs(numberOfState)
+    real*8 :: subpi(numberOfState)
+    integer :: i, j, ipiv(numberOfState), info
 
     lhs=p; rhs = 0.0d0
     ! calculate forward committor
-    forall(i=1:num_state) lhs(i,i) = lhs(i,i) - 1.0d0
-    do i = 1, size(initstate, 1)
-      lhs(initstate(i), :)=0.0d0
-      lhs(:, initstate(i)) = 0.0d0
-      lhs(initstate(i), initstate(i)) = 1.0d0
+    forall(i=1:numberOfState) lhs(i,i) = lhs(i,i) - 1.0d0
+    do i = 1, size(fromState, 1)
+      lhs(fromState(i), :)=0.0d0
+      lhs(:, fromState(i)) = 0.0d0
+      lhs(fromState(i), fromState(i)) = 1.0d0
     enddo
-    do i =1, size(endstate, 1)
-      lhs(endstate(i),:) = 0.0d0
-      lhs(endstate(i), endstate(i)) = 1.0d0
-      rhs(endstate(i)) = 1.0d0
+    do i =1, size(toState, 1)
+      lhs(toState(i),:) = 0.0d0
+      lhs(toState(i), toState(i)) = 1.0d0
+      rhs(toState(i)) = 1.0d0
     enddo
 
-    call DGESV(num_state, 1, lhs, num_state, ipiv, rhs, num_state, info)
-    forward_committor = rhs
+    call DGESV(numberOfState, 1, lhs, numberOfState, ipiv, rhs, numberOfState, info)
+    forwardCommittor = rhs
     if (present(reversible) .and. reversible) then
-      backward_committor = 1.0d0 - forward_committor
+      backwardCommittor = 1.0d0 - forwardCommittor
       subpi = pi
     else
       ! calculate backward committor
-      call math_tpm_pi(p, num_state, subpi)
-      rhs = 0.0d0;
-      do i = 1, num_state
-         do j = 1, num_state
-            lhs(i,j) = subpi(j)* p(j,i) / subpi(i)
+      ! call MathGetTPMPi(p, numberOfState, subpi)
+      rhs = 0.0d0
+      do i = 1, numberOfState
+         do j = 1, numberOfState
+            lhs(i,j) = pi(j)* p(j,i) / pi(i)
          enddo
       enddo
-      forall(i=1:num_state) lhs(i,i) = lhs(i,i) - 1.0d0
-      do i = 1, size(initstate, 1)
-         lhs(initstate(i), :)=0.0d0
-         lhs(initstate(i), initstate(i)) = 1.0d0
-         rhs(initstate(i)) = 1.0d0
+      forall(i=1:numberOfState) lhs(i,i) = lhs(i,i) - 1.0d0
+      do i = 1, size(fromState, 1)
+         lhs(fromState(i), :)=0.0d0
+         lhs(fromState(i), fromState(i)) = 1.0d0
+         rhs(fromState(i)) = 1.0d0
       enddo
-      do i = 1, size(endstate, 1)
-         lhs(endstate(i),:) = 0.0d0
-         lhs(:, endstate(i)) = 0.0d0
-         lhs(endstate(i), endstate(i)) = 1.0d0
+      do i = 1, size(toState, 1)
+         lhs(toState(i),:) = 0.0d0
+         lhs(:, toState(i)) = 0.0d0
+         lhs(toState(i), toState(i)) = 1.0d0
       enddo
-      call DGESV(num_state, 1, lhs, num_state, ipiv, rhs, num_state, info)
-      backward_committor = rhs
+      call DGESV(numberOfState, 1, lhs, numberOfState, ipiv, rhs, numberOfState, info)
+      backwardCommittor = rhs
     endif
 
     flux = 0.0d0
-    forall(i=1:num_state, j=1:num_state, i/=j) flux(i,j)=subpi(i)*p(i,j)*backward_committor(i)*forward_committor(j)
+    forall(i=1:numberOfState, j=1:numberOfState, i/=j) flux(i,j)=pi(i)*p(i,j)*backwardCommittor(i)*forwardCommittor(j)
   end subroutine 
 
-  subroutine tpt_extract_pathways(netflux, numpath, initstate, endstate, totalflux)
-    real*8 :: minflux, totalflux
-    real*8,dimension(:, :) :: netflux
+  subroutine TPTExtractPathWays(netFlux, numpath, fromState, toState, totalFlux)
+    real*8 :: minFlux, totalFlux
+    real*8,dimension(:, :) :: netFlux
     integer :: numpath
-    integer, dimension(:), pointer :: initstate, endstate
-    real*8, allocatable :: netfluxcopy(:, :)
+    integer, dimension(:), pointer :: fromState, toState
+    real*8, allocatable :: netFluxcopy(:, :)
     integer :: i, nodes, index, j, k
 
    numpath = 0; allocate(pathways(100))
-    do k = 1, size(initstate, 1)
-      do j = 1, size(endstate, 1)
-         netfluxcopy = netflux
+    do k = 1, size(fromState, 1)
+      do j = 1, size(toState, 1)
+         netFluxcopy = netFlux
          do
-            call dijkstra(netfluxcopy, size(netfluxcopy, 1), initstate(k), endstate(j))
-            nodes = size(strong_pathway, 1)
+            call dijkstra(netFluxcopy, size(netFluxcopy, 1), fromState(k), toState(j))
+            nodes = size(strongestPathways, 1)
             if(nodes == 1) exit
             numpath = numpath + 1
-            minflux = 1e10
+            minFlux = 1e10
             do i = 1, nodes-1
-               if (minflux > netfluxcopy(strong_pathway(i), strong_pathway(i+1)))  then
-                  minflux = netfluxcopy(strong_pathway(i), strong_pathway(i+1))
+               if (minFlux > netFluxcopy(strongestPathways(i), strongestPathways(i+1)))  then
+                  minFlux = netFluxcopy(strongestPathways(i), strongestPathways(i+1))
                   index = i
                endif
             enddo
             do i = 1, nodes-1
-               netfluxcopy(strong_pathway(i), strong_pathway(i+1)) = &
-                     netfluxcopy(strong_pathway(i), strong_pathway(i+1)) - &
-                     minflux
+               netFluxcopy(strongestPathways(i), strongestPathways(i+1)) = &
+                     netFluxcopy(strongestPathways(i), strongestPathways(i+1)) - &
+                     minFlux
             enddo
-            netfluxcopy(strong_pathway(index), strong_pathway(index+1)) = 0.0d0
-            pathways(numpath)%flux = minflux
+            netFluxcopy(strongestPathways(index), strongestPathways(index+1)) = 0.0d0
+            pathways(numpath)%flux = minFlux
             pathways(numpath)%nodes = nodes
-            pathways(numpath)%pathway = strong_pathway
-            pathways(numpath)%fluxratio =  minflux/ totalflux
+            pathways(numpath)%pathway = strongestPathways
+            pathways(numpath)%fluxRatio =  minFlux / totalFlux
          enddo
       enddo
    enddo
    if (numpath > 100) write(*,"(A)") "numpath is larger than allocated number of pathway, allocate pathway larger"
-  end subroutine tpt_extract_pathways
+  end subroutine TPTExtractPathWays
 
-  subroutine dijkstra(network, num_state, initstate, endstate)
-    integer :: num_state, initstate, endstate
-    real*8,intent(in) :: network(num_state, num_state)
-    real*8 ::  dist(num_state), temp
-    integer :: calculated_state(num_state), laststate(num_state)
-    integer :: j, newstate, oldstate, templist(num_state)
+  subroutine dijkstra(network, numberOfState, fromState, toState)
+    integer :: numberOfState, fromState, toState
+    real*8,intent(in) :: network(numberOfState, numberOfState)
+    real*8 ::  dist(numberOfState), temp
+    integer :: visitedState(numberOfState), previousState(numberOfState)
+    integer :: j, newState, oldState, tempArray(numberOfState)
 
-    calculated_state = 0; dist = -huge(1.0); oldstate = endstate
-    newstate = initstate; calculated_state(newstate) = 1
+    visitedState = 0; dist = -huge(1.0); oldState = toState
+    newState = fromState; visitedState(newState) = 1
     do
-       if(newstate == endstate) exit ! if find end, then exit
-       if(newstate == oldstate) then ! if can't find other node next to intistate
-          if (allocated(strong_pathway)) deallocate(strong_pathway)
-          allocate(strong_pathway(1))
+       if(newState == toState) exit ! if find end, then exit
+       if(newState == oldState) then ! if can't find other node next to intistate
+          if (allocated(strongestPathways)) deallocate(strongestPathways)
+          allocate(strongestPathways(1))
           return
        endif
-       oldstate = newstate
-       do  j = 1, num_state
-          if(network(oldstate, j) > 0d0 .and. calculated_state(j) == 0) then
-             if(network(oldstate, j) > dist(j))  then
-                dist(j) = network(oldstate, j)
-                laststate(j) = oldstate
+       oldState = newState
+       do  j = 1, numberOfState
+          if(network(oldState, j) > 0d0 .and. visitedState(j) == 0) then
+             if(network(oldState, j) > dist(j))  then
+                dist(j) = network(oldState, j)
+                previousState(j) = oldState
              endif
           endif
        enddo
        temp = 0
-       do j = 1, num_state
-          if(calculated_state(j) == 0) then
+       do j = 1, numberOfState
+          if(visitedState(j) == 0) then
              if(dist(j) > temp) then
                 temp = dist(j)
-                newstate = j
+                newState = j
              endif
           endif
        enddo
-       calculated_state(newstate) = 1
+       visitedState(newState) = 1
     enddo
-    newstate = endstate; j = 1; templist(j) = endstate
+    newState = toState; j = 1; tempArray(j) = toState
     do
-       if(newstate == initstate) exit
-       newstate = laststate(newstate)
+       if(newState == fromState) exit
+       newState = previousState(newState)
        j = j + 1
-       templist(j) = newstate
+       tempArray(j) = newState
     enddo
-    if (allocated(strong_pathway)) deallocate(strong_pathway)
-    allocate(strong_pathway(j)); strong_pathway = templist(j:1:-1)
+    if (allocated(strongestPathways)) deallocate(strongestPathways)
+    allocate(strongestPathways(j)); strongestPathways = tempArray(j:1:-1)
   end subroutine dijkstra
 
-  subroutine tpt_mfpt(tpm, num_state)
-    integer :: num_state
-    real*8 :: tpm(num_state, num_state)
-    real*8 :: fundamental_matrix(num_state, num_state)
-    real*8 :: temp_matrix(num_state, num_state)
-    integer :: i, j
 
-    allocate(mfpt(num_state, num_state))
-    if (allocated(pi)) deallocate(pi)
-    allocate(pi(num_state))
-    call math_tpm_pi(tpm, num_state, pi)
-    temp_matrix = - tpm
-    forall(i=1:num_state)
-       temp_matrix(i, i) = 1 + temp_matrix(i, i)
-       temp_matrix(i, :) = temp_matrix(i, :) + pi(:)
-    end forall
-    call math_inv(temp_matrix, fundamental_matrix)
-    mfpt = 0
-    forall(i=1:num_state, j=1:num_state,i/=j)
-       mfpt(i, j) = (fundamental_matrix(j,j) - fundamental_matrix(i, j)) / pi(j)
-    end forall
-    deallocate(pi)
-  end subroutine tpt_mfpt
-
-  subroutine coarse_grain_flux(flux, macro_net_flux)
+  subroutine TPTCoarseGrainFlux(flux, macroNetFlux)
     real*8, intent(in), dimension(:, :) :: flux
-    real*8, intent(out), dimension(nstate, nstate) ::  macro_net_flux
-    real*8, DIMENSION(nstate, nstate) :: macro_flux 
-    real*8, dimension(nstate) :: pfold, macro_pi, qminus
+    real*8, intent(out), dimension(nstate, nstate) ::  macroNetFlux
+    real*8, DIMENSION(nstate, nstate) :: macroFlux 
+    real*8, dimension(nstate) :: pFold, macroStationaryDistribution, qMinus
     integer :: i, j, m, n
-    real*8 :: flux_temp, tempsum, temp, tempsum2
+    real*8 :: tempFlux, tempDoubleSum, temp, tempDoubleSum2
 
-    macro_flux = 0.d0
+    macroFlux = 0.d0
     do i = 1, nstate
       do j = 1, nstate
-        flux_temp = 0d0
+        tempFlux = 0d0
         if(i/=j) then
-          do m = stateindex(i), stateindex(i+1) - 1
-            do n = stateindex(j), stateindex(j+1) - 1
-              flux_temp = flux_temp + flux(maptomacro(m), maptomacro(n))
+          do m = stateIndex(i), stateIndex(i+1) - 1
+            do n = stateIndex(j), stateIndex(j+1) - 1
+              tempFlux = tempFlux + flux(clusterMapToMacroIndex(m), clusterMapToMacroIndex(n))
             enddo
           enddo
-          macro_flux(i, j) = flux_temp
+          macroFlux(i, j) = tempFlux
         endif
       enddo
     enddo
 
     ! forall(i=1:nstate, j=1:nstate, i/=j) 
     forall(i=1:nstate, j=1:nstate) 
-      macro_net_flux(i,j)=max(macro_flux(i,j)-macro_flux(j,i), 0.0d0)
+      macroNetFlux(i,j)=max(macroFlux(i,j)-macroFlux(j,i), 0.0d0)
     endforall
 
-    totalflux = 0d0
-    do i = 1, max_state_num
-      if(endstate(i)/= 0) then
-        totalflux = sum(macro_net_flux(:, endstate(i)))
+    totalFlux = 0d0
+    do i = 1, maxStateNumber
+      if(endState(i)/= 0) then
+        totalFlux = sum(macroNetFlux(:, endState(i)))
       else
         exit
       endif
     enddo
-    ! print*, endstate
-    ! print*, totalflux
-    ! print*, macro_net_flux(:, 19)
-    ! stop
 
     do i = 1, nstate
-      temp = 0d0; tempsum=0d0; tempsum2 = 0d0
-      do j = stateindex(i), stateindex(i+1) - 1
-        temp = temp + pi(maptomacro(j))
+      temp = 0d0; tempDoubleSum=0d0; tempDoubleSum2 = 0d0
+      do j = stateIndex(i), stateIndex(i+1) - 1
+        temp = temp + pi(clusterMapToMacroIndex(j))
       enddo
-      macro_pi(i) = temp
-      do j = stateindex(i), stateindex(i + 1) - 1
-        tempsum = tempsum + forward_committor(maptomacro(j)) * pi(maptomacro(j))
-        tempsum2 = tempsum2 + backward_committor(maptomacro(j)) * pi(maptomacro(j))
+      macroStationaryDistribution(i) = temp
+      do j = stateIndex(i), stateIndex(i + 1) - 1
+        tempDoubleSum = tempDoubleSum + forwardCommittor(clusterMapToMacroIndex(j)) * pi(clusterMapToMacroIndex(j))
+        tempDoubleSum2 = tempDoubleSum2 + backwardCommittor(clusterMapToMacroIndex(j)) * pi(clusterMapToMacroIndex(j))
       enddo
-      pfold(i) = tempsum/temp
-      qminus(i) = tempsum2/temp
+      pFold(i) = tempDoubleSum/temp
+      qMinus(i) = tempDoubleSum2/temp
     enddo
 
-    if (allocated(forward_committor)) then
-      DEALLOCATE(forward_committor, pi, backward_committor)
-      allocate(forward_committor(nstate), pi(nstate), backward_committor(nstate))
-      forward_committor = pfold
-      pi = macro_pi
-      backward_committor = qminus
+    if (allocated(forwardCommittor)) then
+      DEALLOCATE(forwardCommittor, pi, backwardCommittor)
+      allocate(forwardCommittor(nstate), pi(nstate), backwardCommittor(nstate))
+      forwardCommittor = pFold
+      pi = macroStationaryDistribution
+      backwardCommittor = qMinus
     endif
-    kab = totalflux / sum(pi * backward_committor)
+    kAB = totalFlux / sum(pi * backwardCommittor)
   end subroutine
 
-  subroutine get_feature_index(tparray, features, sortindex)
+  subroutine TPTGetFeatureIndex(tempArray, features, sortIndex)
     integer :: features
-    real*8 :: temp, tparray(features)
-    integer :: tempint, sortindex(features)
+    real*8 :: temp, tempArray(features)
+    integer :: tempint, sortIndex(features)
     integer :: i, j
 
     do i = 1, features
-      sortindex(i) = i
+      sortIndex(i) = i
     enddo
     do i = 1, features
       do j = i+1, features
-          if (tparray(j) > tparray(i)) then
-            temp = tparray(i)
-            tparray(i) = tparray(j)
-            tparray(j)  = temp
+          if (tempArray(j) > tempArray(i)) then
+            temp = tempArray(i)
+            tempArray(i) = tempArray(j)
+            tempArray(j)  = temp
 
-            tempint = sortindex(i)
-            sortindex(i) = sortindex(j)
-            sortindex(j) = tempint
+            tempint = sortIndex(i)
+            sortIndex(i) = sortIndex(j)
+            sortIndex(j) = tempint
           endif
       enddo
     enddo
   end subroutine
+
+  subroutine TPTMfpt(macroTPM)
+    real*8, intent(in) :: macroTPM(:, :)
+    real*8 :: fundamentalMatrix(nstate, nstate)
+    real*8 :: tempDoubleMatrix(nstate, nstate)
+    integer :: i, j
+
+    allocate(mfpt(nstate, nstate))
+    if (allocated(pi)) deallocate(pi)
+    allocate(pi(nstate))
+    call MathGetTPMPi(tpm, nstate, pi)
+    tempDoubleMatrix = - macroTPM
+    forall(i=1:nstate)
+       tempDoubleMatrix(i, i) = 1 + tempDoubleMatrix(i, i)
+       tempDoubleMatrix(i, :) = tempDoubleMatrix(i, :) + pi(:)
+    end forall
+    call MathMatrixInverse(tempDoubleMatrix, fundamentalMatrix)
+    mfpt = 0
+    forall(i=1:nstate, j=1:nstate, i/=j)
+       mfpt(i, j) = (fundamentalMatrix(j,j) - fundamentalMatrix(i, j)) / pi(j)
+    end forall
+    deallocate(pi)
+  end subroutine TPTMfpt
+
 end module

@@ -1,50 +1,50 @@
 module math
   implicit none
 contains
-  subroutine math_tpm_pi(tpm, nstate, pi)
+  subroutine MathGetTPMPi(tpm, nstate, pi)
     integer :: nstate
     real*8, intent(in) :: tpm(nstate, nstate)
     real*8, intent(out) :: pi(nstate)
-    real*8 :: eigenvalue(nstate), eigenvector(nstate, nstate)
-    call math_solve_eigenproblem_tpm(tpm, eigenvalue, eigenvector, pi)
-  end subroutine math_tpm_pi
+    real*8 :: eigenValue(nstate), eigenVector(nstate, nstate)
+    call MathSolveEigenProblem(tpm, eigenValue, eigenVector, pi)
+  end subroutine MathGetTPMPi
 
-  subroutine math_solve_eigenproblem_tpm(tpm, eigenvalue, eigenvector, pi)
+  subroutine MathSolveEigenProblem(tpm, eigenValue, eigenVector, pi)
     real*8, dimension(:, :), intent(in) :: tpm
-    real*8, dimension(:, :), intent(out) :: eigenvector
-    real*8, dimension(:),intent(out) :: eigenvalue, pi
-    integer :: i,j,info, tcmdim
-    real*8, allocatable :: eigenvalue_img(:), work(:), tpvec(:), tpmcopy(:,:), eigenleft(:,:)
+    real*8, dimension(:, :), intent(out) :: eigenVector
+    real*8, dimension(:),intent(out) :: eigenValue, pi
+    integer :: i,j,info, tcmDim
+    real*8, allocatable :: eigenValue_img(:), work(:), tpvec(:), tpmcopy(:,:), eigenleft(:,:)
     real*8 :: temp
 
-    tcmdim = size(tpm, 1)
-    allocate(work(4*tcmdim), eigenvalue_img(tcmdim), tpvec(tcmdim), tpmcopy(tcmdim, tcmdim), eigenleft(tcmdim, tcmdim))
+    tcmDim = size(tpm, 1)
+    allocate(work(4*tcmDim), eigenValue_img(tcmDim), tpvec(tcmDim), tpmcopy(tcmDim, tcmDim), eigenleft(tcmDim, tcmDim))
     tpmcopy = tpm
 
-    call dgeev('V', 'V', tcmdim, tpmcopy, tcmdim, eigenvalue, eigenvalue_img, eigenleft, &
-         tcmdim, eigenvector, tcmdim, work, 4*tcmdim, info )
+    call dgeev('V', 'V', tcmDim, tpmcopy, tcmDim, eigenValue, eigenValue_img, eigenleft, &
+         tcmDim, eigenVector, tcmDim, work, 4*tcmDim, info )
 
-    do i=1,tcmdim
-       do j=i+1,tcmdim
-          if ( abs(eigenvalue(j)) > abs(eigenvalue(i)) ) then
-             temp = eigenvalue(i); eigenvalue(i) = eigenvalue(j); eigenvalue(j)=temp
-             tpvec = eigenvector(:,i); eigenvector(:,i) = eigenvector(:,j); eigenvector(:,j)=tpvec
+    do i=1,tcmDim
+       do j=i+1,tcmDim
+          if ( abs(eigenValue(j)) > abs(eigenValue(i)) ) then
+             temp = eigenValue(i); eigenValue(i) = eigenValue(j); eigenValue(j)=temp
+             tpvec = eigenVector(:,i); eigenVector(:,i) = eigenVector(:,j); eigenVector(:,j)=tpvec
              tpvec = eigenleft(:, i); eigenleft(:,i) = eigenleft(:, j);eigenleft(:, j) = tpvec
           end if
        end do
     end do
-    ! in case there is -1 eigenvalue
-    do i = 1, tcmdim
-       if(abs(eigenvalue(i)-1)<1e-6) then
+    ! in case there is -1 eigenValue
+    do i = 1, tcmDim
+       if(abs(eigenValue(i)-1)<1e-6) then
           pi(:) = eigenleft(:,1)
           temp = sum(pi); pi = pi/temp
           exit
        endif
     enddo
-    deallocate(work, eigenvalue_img, tpvec, tpmcopy,eigenleft)
-  end subroutine math_solve_eigenproblem_tpm
+    deallocate(work, eigenValue_img, tpvec, tpmcopy,eigenleft)
+  end subroutine MathSolveEigenProblem
 
-  subroutine math_inv(A, Ainv)
+  subroutine MathMatrixInverse(A, Ainv)
     real*8, dimension(:, :), intent(in) :: A
     real*8, dimension(size(A, 1), size(A, 1)) :: Ainv
     real*8, dimension(size(A,1)) :: work  ! work array for LAPACK
@@ -70,10 +70,10 @@ contains
     if (info /= 0) then
        stop 'Matrix inversion failed!'
     end if
-  end subroutine math_inv
+  end subroutine MathMatrixInverse
 
-  subroutine math_nelmin ( fn, n, start, xmin, ynewlo, reqmin, step, konvge, kcount, &
-       icount, numres, ifault )
+  subroutine MathOptimazationNelderMean ( fn, n, start, xmin, ynewlo, reqmin, step, & 
+   konvge, kcount, icount, numres, ifault )
 
     !*****************************************************************************80
     !
@@ -436,106 +436,132 @@ contains
 
     end do
     return
-  end subroutine math_nelmin
+  end subroutine MathOptimazationNelderMean
 
-   subroutine math_euclidean_distance(coor1, coor2, dist2, n)
+   subroutine MathEuclideanDistanceSquare(coor1, coor2, dist2, n)
       integer,intent(in) :: n
       real*8, intent(in) :: coor1(n), coor2(n)
       real*8, intent(out) :: dist2
       dist2 = dot_product(coor1-coor2, coor1-coor2)
    end subroutine
 
-   subroutine math_lRMSD(coor1_raw, coor2_raw, rmsd, ndim)
-      integer, intent(in) :: ndim
-      real*8, intent(in) :: coor1_raw(ndim),coor2_raw(ndim)
+
+   subroutine MathAtomRMSD(coor1_raw, coor2_raw, rmsd, atomDegree)
+      integer, intent(in) :: atomDegree
+      real*8, intent(in) :: coor1_raw(atomDegree),coor2_raw(atomDegree)
       real*8, intent(out) :: rmsd
 
-      integer :: inum, i, j, info, idim
+      integer :: inum, i, j, info, idim, tpnatom
       real*8 :: tpvec(3),umatrix(3,3),vmatrix(3,3),wvector(3),tpmatrix(3,3), work(15), originmatrix(3,3)
       real*8 :: dsign, temp
-      real*8 :: tpcoor(ndim), coor1(ndim), coor2(ndim)
+      real*8 :: tpcoor(atomDegree), coor1(atomDegree), coor2(atomDegree)
 
       coor1 = coor1_raw
       coor2 = coor2_raw
 
-      if ( mod(ndim, 3) /= 0 ) STOP "wrong ndim!"
+      if ( mod(atomDegree, 3) /= 0 ) STOP "wrong atomDegree!"
 
       tpvec = 0.0d0
-
-      do i = 1, ndim, 3
+      do i = 1, atomDegree, 3
          tpvec(1:3) = tpvec(1:3) + coor1(i:i+2)
       end do
-      tpvec = tpvec / dble(ndim/3)
-      do i =1, ndim, 3
+      tpvec = tpvec / dble(atomDegree/3)
+      do i =1, atomDegree, 3
          coor1(i:i+2) = coor1(i:i+2) - tpvec(1:3)
       end do
 
       tpvec = 0.0d0
-      do i = 1, ndim, 3
+      do i = 1, atomDegree, 3
          tpvec = tpvec + coor2(i:i+2)
       end do
-      tpvec = tpvec / dble(ndim/3)
-      do i = 1, ndim, 3
-         coor2(i:i+2) = coor2(i:i+2) - tpvec
+      tpvec = tpvec / dble(atomDegree/3)
+      do i = 1, atomDegree, 3
+         coor2(i:i+2) = coor2(i:i+2) - tpvec(1:3)
       end do
 
       originmatrix = 0.0d0
 
       do i = 1, 3
          do j = 1, 3
-            do idim = 1, ndim, 3
+            do idim = 1, atomDegree, 3
                originmatrix(i, j) = originmatrix(i, j) + coor1(idim + i - 1) * coor2(idim + j - 1)
             end do
          end do
       end do
-      call dgesvd("A", "A", 3, 3, originmatrix, 3, wvector, umatrix, 3, vmatrix, 3, work, 15 ,info)
-      vmatrix = transpose(vmatrix)
 
-      dsign = 1.0d0
+      call GetMatrixDeterminant(3, originmatrix, temp)
+      dsign = sign(1.0d0, temp)
+
+      wvector=0d0; umatrix=0d0; vmatrix=0d0
+      call dgesvd("A", "A", 3, 3, originmatrix, 3, wvector, umatrix, 3, vmatrix, 3, work, 15 ,info)
+      ! vmatrix = transpose(vmatrix)
+
+
       tpvec(1:3) = (/1.0d0,1.0d0,dsign/)
       do i = 1, 3
          do j = 1, 3
             temp = 0.0d0
             do inum = 1, 3
-               temp = temp + vmatrix(i, inum) * tpvec(inum) * umatrix(j, inum)
+               temp = temp + vmatrix(inum, i) * tpvec(inum) * umatrix(j, inum)
             end do
             tpmatrix(i,j) = temp
          end do
       end do
 
       rmsd = 0d0; tpcoor = 0d0
-      do idim = 1, ndim, 3
+      do idim = 1, atomDegree, 3
          do i = 1, 3
             tpcoor(idim+i-1) = dot_product(tpmatrix(i,1:3),coor1(idim:idim+2))
             rmsd = rmsd + (tpcoor(idim+i-1) - coor2(idim+i-1))**2
          end do
       end do
-      rmsd = sqrt( rmsd / dble (ndim / 3) )
+      rmsd = sqrt( rmsd / dble (atomDegree / 3) )
+   contains
+      subroutine GetMatrixDeterminant(atomDegree, amatrix, determinant) 
+         implicit none
+         integer,intent(in):: atomDegree
+         real*8,intent(in),dimension(atomDegree,atomDegree):: amatrix
+         real*8,intent(out) :: determinant
+         integer:: idim,jdim
+         real*8:: mij,tpmatrix(atomDegree,atomDegree)
+
+         tpmatrix=amatrix
+         do jdim=1,atomDegree
+            do idim=jdim+1,atomDegree
+               if ( tpmatrix(jdim,jdim) == 0.0d0 ) cycle
+               mij=tpmatrix(idim,jdim)/tpmatrix(jdim,jdim)
+               tpmatrix(idim,jdim:atomDegree) = tpmatrix(idim,jdim:atomDegree) - mij*tpmatrix(jdim,jdim:atomDegree)
+            end do
+         end do
+         determinant=1.0d0
+         do idim=1,atomDegree
+            determinant=determinant*tpmatrix(idim,idim)
+         end do      
+      end subroutine 
    end subroutine
 
-   subroutine math_normalization(traj, normalize_traj, ndim, nsnap)
-      real*8, intent(in) :: traj(ndim, nsnap)
-      real*8, intent(out) :: normalize_traj(ndim, nsnap)
-      integer, intent(in) :: ndim, nsnap
+   subroutine MathNormalization(traj, normalize_traj, atomDegree, cvFrameNumber)
+      real*8, intent(in) :: traj(atomDegree, cvFrameNumber)
+      real*8, intent(out) :: normalize_traj(atomDegree, cvFrameNumber)
+      integer, intent(in) :: atomDegree, cvFrameNumber
 
-      ! real*8 :: normalize_traj(ndim, nsnap)
-      real*8 :: average(ndim), standard_deviation(ndim)
+      ! real*8 :: normalize_traj(atomDegree, cvFrameNumber)
+      real*8 :: average(atomDegree), standard_deviation(atomDegree)
       real*8 :: total
       integer :: i, j
 
-      average = sum(traj, dim=2)/nsnap
-      do i = 1, ndim
+      average = sum(traj, dim=2)/cvFrameNumber
+      do i = 1, atomDegree
          total = 0.0d0
-         do j = 1, nsnap
+         do j = 1, cvFrameNumber
             total = total + (traj(i,j) - average(i)) * (traj(i,j)-average(i))
          enddo
-         standard_deviation(i) = sqrt(total/dble((nsnap-1)))
+         standard_deviation(i) = sqrt(total/dble((cvFrameNumber-1)))
       enddo
-      do i = 1, ndim
-         do j = 1, nsnap
+      do i = 1, atomDegree
+         do j = 1, cvFrameNumber
             normalize_traj(i, j) = (traj(i,j) - average(i))/(standard_deviation(i))
          enddo
       enddo
    end subroutine
 end module math
-

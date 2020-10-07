@@ -3,102 +3,102 @@ module transform
   implicit none
 contains
 
-  subroutine mod_transform(inputfile, resultfile)
-    character(256) :: datafile, transformmethod, inputfile, resultfile
-    integer :: nsnap, nfeature, ncomponent, iofile, ierr, lagtime, i
+  subroutine mod_transform(inputFile, resultFile)
+    character(256) :: datafile, transformmethod, inputFile, resultFile
+    integer :: cvFrameNumber, nfeature, ncomponent, ioFile, ierr, lagTime, i
     real*8, allocatable :: data(:, :), maparray(:, :)
 
-    namelist /transform/ datafile, transformmethod, ncomponent, lagtime
+    namelist /transform/ datafile, transformmethod, ncomponent, lagTime
 
-    call loginfo("Transformation")
+    call LogInfo("Transformation")
 
-    call getfreeunit(iofile)
-    open(unit=iofile, file=trim(inputfile), action="read")
-    read(iofile, nml=transform, iostat=ierr)
-    if(ierr < 0) call errormsg("error in reading the transform namelist")
-    close(iofile)
+    call GetFreeUnit(ioFile)
+    open(unit=ioFile, file=trim(inputFile), action="read")
+    read(ioFile, nml=transform, iostat=ierr)
+    if(ierr < 0) call ErrorMessage("error in reading the transform namelist")
+    close(ioFile)
 
 
-    call getfreeunit(iofile)
-    open(unit=iofile, file=trim(datafile), action="read")
-    read(iofile, *) nsnap, nfeature
+    call GetFreeUnit(ioFile)
+    open(unit=ioFile, file=trim(datafile), action="read")
+    read(ioFile, *) cvFrameNumber, nfeature
     if(ncomponent > nfeature) STOP "ncomponent must not big than the features in the datafile"
-    allocate(data(nsnap, nfeature), maparray(nsnap, ncomponent))
-    do i = 1, nsnap
-      read(iofile, *) data(i, :)
+    allocate(data(cvFrameNumber, nfeature), maparray(cvFrameNumber, ncomponent))
+    do i = 1, cvFrameNumber
+      read(ioFile, *) data(i, :)
     enddo
-    close(iofile)
+    close(ioFile)
 
     if(trim(transformmethod) == "pca") then
-      call pca(data, nsnap, nfeature, ncomponent, maparray)
+      call pca(data, cvFrameNumber, nfeature, ncomponent, maparray)
     else if(trim(transformmethod) == "tica") then
-      call tica(data, nsnap, nfeature, ncomponent, maparray, lagtime)
+      call tica(data, cvFrameNumber, nfeature, ncomponent, maparray, lagTime)
     else
-      call errormsg("transformmethod must be pca or tica")
+      call ErrorMessage("transformmethod must be pca or tica")
     endif
 
-    open(unit=iofile, file=trim(resultfile), action="write")
-    do i = 1, nsnap
-      write(iofile, *) maparray(i, :)
+    open(unit=ioFile, file=trim(resultFile), action="write")
+    do i = 1, cvFrameNumber
+      write(ioFile, *) maparray(i, :)
     enddo
-    close(iofile)
+    close(ioFile)
 
     deallocate(data, maparray)
-    call loginfo()
+    call LogInfo()
   end subroutine
 
-  subroutine pca(tparray, nsnap, nfeature, ncomponent, maparray)
-    integer, intent(in) :: nsnap, nfeature, ncomponent
-    real*8, intent(inout) :: tparray(nsnap, nfeature)
-    real*8, intent(out) :: maparray(nsnap, ncomponent)
+  subroutine pca(tempArray, cvFrameNumber, nfeature, ncomponent, maparray)
+    integer, intent(in) :: cvFrameNumber, nfeature, ncomponent
+    real*8, intent(inout) :: tempArray(cvFrameNumber, nfeature)
+    real*8, intent(out) :: maparray(cvFrameNumber, ncomponent)
 
     integer :: i, j, info
     real*8 :: average(nfeature), cov(nfeature, nfeature)
-    real*8 :: eigenvector(nfeature, nfeature)
-    real*8 :: eigenvalue_real(nfeature), eigenvalue_img(nfeature), work(4*nfeature), tempmatrix(nfeature,nfeature)
+    real*8 :: eigenVector(nfeature, nfeature)
+    real*8 :: eigenValue_real(nfeature), eigenValue_img(nfeature), work(4*nfeature), tempmatrix(nfeature,nfeature)
     integer :: component_index(nfeature)
 
     do i = 1, nfeature
-      average(i) = sum(tparray(:,i))/nsnap
-      tparray(:, i) = tparray(:, i) - average(i)
+      average(i) = sum(tempArray(:,i))/cvFrameNumber
+      tempArray(:, i) = tempArray(:, i) - average(i)
     enddo
 
     do i = 1, nfeature
       do j = 1, nfeature
-          cov(i,j) = sum((tparray(:, i) - average(i)) * (tparray(:, j) - average(j)))/(nsnap - 1)
+          cov(i,j) = sum((tempArray(:, i) - average(i)) * (tempArray(:, j) - average(j)))/(cvFrameNumber - 1)
       enddo
     enddo
-    call dgeev("N","V", nfeature, cov, nfeature, eigenvalue_real, eigenvalue_img, &
-        tempmatrix, nfeature, eigenvector, nfeature, work, 4*nfeature, info)
-    call get_feature_index(eigenvalue_real, nfeature, component_index)
+    call dgeev("N","V", nfeature, cov, nfeature, eigenValue_real, eigenValue_img, &
+        tempmatrix, nfeature, eigenVector, nfeature, work, 4*nfeature, info)
+    call TPTGetFeatureIndex(eigenValue_real, nfeature, component_index)
     do i = 1, ncomponent
-      tempmatrix(:, i) = eigenvector(:, component_index(i))
+      tempmatrix(:, i) = eigenVector(:, component_index(i))
     enddo
-    maparray = matmul(tparray, tempmatrix(:, 1:ncomponent))
-    write(*, "(a,10f10.5)")"PCA eigenvalue", eigenvalue_real
-    write(*, "(a)")"PCA eigenvector:"
+    maparray = matmul(tempArray, tempmatrix(:, 1:ncomponent))
+    write(*, "(a,10f10.5)")"PCA eigenValue", eigenValue_real
+    write(*, "(a)")"PCA eigenVector:"
     do i = 1, nfeature
-      write(*, "(10f10.5)") eigenvector(i, :)
+      write(*, "(10f10.5)") eigenVector(i, :)
     enddo
   end subroutine pca
 
-  subroutine tica(data, npoint, nfeature, ncomponent, maparray, lagtime)
-    use math, only: math_inv
-    integer :: lagtime, npoint, nfeature, ncomponent, i, j, offset, info, component_index(nfeature)
+  subroutine tica(data, npoint, nfeature, ncomponent, maparray, lagTime)
+    use math, only: MathMatrixInverse
+    integer :: lagTime, npoint, nfeature, ncomponent, i, j, offset, info, component_index(nfeature)
     real*8 :: data(npoint, nfeature), cov(nfeature, nfeature), cov_tau(nfeature, nfeature), exx(nfeature, nfeature)
     real*8 :: data_mean(nfeature, 1), cov_inv(nfeature, nfeature)
-    real*8 :: eigenvalue_real(nfeature), eigenvalue_img(nfeature), tempmatrix(nfeature, nfeature)
-    real*8 :: eigenvector(nfeature,nfeature), work(4*nfeature), maparray(npoint, ncomponent)
+    real*8 :: eigenValue_real(nfeature), eigenValue_img(nfeature), tempmatrix(nfeature, nfeature)
+    real*8 :: eigenVector(nfeature,nfeature), work(4*nfeature), maparray(npoint, ncomponent)
 
-    offset = npoint - lagtime
+    offset = npoint - lagTime
     exx = matmul(transpose(data(:offset, :)), data(:offset, :)) &
-        + matmul(transpose(data(lagtime+1:, :)), data(lagtime+1:, :))
+        + matmul(transpose(data(lagTime+1:, :)), data(lagTime+1:, :))
     exx = exx / dble(offset * 2)
     do i=1, nfeature
-      data_mean(i, 1) = sum(data(:offset, i) + data(lagtime+1:, i)) / dble(offset * 2)
+      data_mean(i, 1) = sum(data(:offset, i) + data(lagTime+1:, i)) / dble(offset * 2)
     enddo
     cov  = exx - matmul(data_mean, transpose(data_mean))
-    exx = matmul(transpose(data(:offset, :)), data(lagtime+1:, :)) / dble(offset)
+    exx = matmul(transpose(data(:offset, :)), data(lagTime+1:, :)) / dble(offset)
     exx = (transpose(exx) + exx) /2.0d0
     cov_tau = exx - matmul(data_mean, transpose(data_mean))
 
@@ -108,50 +108,50 @@ contains
           cov(i,j) = 0.0d0
       enddo
     enddo
-    call math_inv(cov, cov_inv)
+    call MathMatrixInverse(cov, cov_inv)
     !call inv(cov, cov_inv, nfeature)
     !cov_inv = cov
     tempmatrix = matmul(cov_inv, matmul(cov_tau, transpose(cov_inv)))
-    call dgeev("N","V", nfeature, tempmatrix, nfeature, eigenvalue_real, eigenvalue_img, &
-        tempmatrix, nfeature, eigenvector, nfeature, work, 4*nfeature, info)
-    eigenvector = matmul(transpose(cov_inv), eigenvector)
+    call dgeev("N","V", nfeature, tempmatrix, nfeature, eigenValue_real, eigenValue_img, &
+        tempmatrix, nfeature, eigenVector, nfeature, work, 4*nfeature, info)
+    eigenVector = matmul(transpose(cov_inv), eigenVector)
 
     do i = 1,nfeature
-      eigenvector(:,i) = eigenvalue_real(i) * eigenvector(:, i)
+      eigenVector(:,i) = eigenValue_real(i) * eigenVector(:, i)
     enddo
-    call get_feature_index(eigenvector, nfeature, component_index)
+    call TPTGetFeatureIndex(eigenVector, nfeature, component_index)
     do i = 1, ncomponent
-      tempmatrix(:, i) = eigenvector(:, component_index(i))
+      tempmatrix(:, i) = eigenVector(:, component_index(i))
     enddo
     do i = 1, nfeature
       data(:, i) = data(:, i) - data_mean(i, 1)
     end do
     maparray = matmul(data, tempmatrix(:, 1:ncomponent))
-    write(*, "(a,10f10.5)")"tica eigenvalue", eigenvalue_real
+    write(*, "(a,10f10.5)")"tica eigenValue", eigenValue_real
     do i = 1, nfeature
-      write(*, "(10f10.5)") eigenvector(i, :)
+      write(*, "(10f10.5)") eigenVector(i, :)
     enddo
   end subroutine tica
 
-subroutine get_feature_index(tparray, nfeature, sortindex)
+subroutine TPTGetFeatureIndex(tempArray, nfeature, sortIndex)
   integer :: nfeature
-  real*8 :: temp, tparray(nfeature)
-  integer :: tempint, sortindex(nfeature)
+  real*8 :: temp, tempArray(nfeature)
+  integer :: tempint, sortIndex(nfeature)
   integer :: i, j
 
   do i = 1, nfeature
-     sortindex(i) = i
+     sortIndex(i) = i
   enddo
   do i = 1, nfeature
      do j = i+1, nfeature
-        if (tparray(j) > tparray(i)) then
-           temp = tparray(i)
-           tparray(i) = tparray(j)
-           tparray(j)  = temp
+        if (tempArray(j) > tempArray(i)) then
+           temp = tempArray(i)
+           tempArray(i) = tempArray(j)
+           tempArray(j)  = temp
 
-           tempint = sortindex(i)
-           sortindex(i) = sortindex(j)
-           sortindex(j) = tempint
+           tempint = sortIndex(i)
+           sortIndex(i) = sortIndex(j)
+           sortIndex(j) = tempint
         endif
      enddo
   enddo

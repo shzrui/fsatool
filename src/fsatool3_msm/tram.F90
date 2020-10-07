@@ -1,6 +1,6 @@
 module tram
   use util
-  use mod_global
+  use GlobalVariable
   use cluster, only: maptocluster
   implicit none
   PRIVATE
@@ -9,102 +9,103 @@ module tram
    integer, allocatable :: snapindex(:)
    logical, allocatable :: unbiased_keep(:), ifkeepArray(:)
    real*8, allocatable ::  pi(:), fk(:, :), logvk(:, :), logrk(:, :)
-  PUBLIC :: tram_analysis, mod_tram
+  PUBLIC :: TramAnalysis, mod_tram
 contains
 
 ! Multiensemble Markov models of molecular thermodynamics and kinetics.
 ! Hao Wua, Fabian Paula, Christoph Wehmeyer, and Frank Noe. PNAS, 2016, 25, 3221-3230
-   subroutine mod_tram(inputfile, resultfile)
-      use  mod_global, only: ncluster, nlevel, kelvinarray, trajindex, snappot, levelindex, lagstep, ifcutcluster 
+   subroutine mod_tram(inputFile, resultFile)
+      use  GlobalVariable, only: ncluster, nlevel, kelvinArray, trajindex, potentialPerSnap, levelIndex, lagStep, ifTrimCluster 
       use cluster, only: maptocluster
-      character(256) :: inputfile, resultfile, datafile
-      integer :: iofile, ierr, i, index, index2, index3
+      character(256) :: inputFile, resultFile, datafile
+      integer :: ioFile, ierr, i, index, index2, index3
       real*8 :: temppot
       real*8, allocatable :: tpm(: ,:)
-      integer, allocatable :: reducedtcmindex(:)
-      namelist /tram/ kelvinarray, nlevel, lagstep, datafile
+      integer, allocatable :: reducedTCMIndex(:)
+      namelist /tram/ kelvinArray, nlevel, lagStep, datafile
 
-      if(procid > 0) return
-      resultdir = "."
-      call getfreeunit(iofile)
-      open(unit=iofile, file=trim(inputfile), action="read")
-      read(iofile, nml=tram, iostat=ierr)
-      if(ierr < 0) call errormsg("error in reading tram namelist")
-      close(iofile)
+      if(procId > 0) return
+      resultDir = "."
+      call GetFreeUnit(ioFile)
+      open(unit=ioFile, file=trim(inputFile), action="read")
+      read(ioFile, nml=tram, iostat=ierr)
+      if(ierr < 0) call ErrorMessage("error in reading tram namelist")
+      close(ioFile)
 
-      call  getfreeunit(iofile)
-      open(iofile, file=trim(datafile), action="read")
-      read(iofile, *) nsnap, ncluster
-      allocate(maptocluster(nsnap), trajindex(nsnap), snappot(nsnap), levelindex(nsnap), ifcutcluster(nsnap))
-      ifcutcluster=0
-      do i = 1, nsnap
-         read(iofile, *) index, index2, index3, temppot
+      call  GetFreeUnit(ioFile)
+      open(ioFile, file=trim(datafile), action="read")
+      read(ioFile, *) cvFrameNumber, ncluster
+      allocate(maptocluster(cvFrameNumber), trajindex(cvFrameNumber), potentialPerSnap(cvFrameNumber), & 
+                     levelIndex(cvFrameNumber), ifTrimCluster(cvFrameNumber))
+      ifTrimCluster=0
+      do i = 1, cvFrameNumber
+         read(ioFile, *) index, index2, index3, temppot
          maptocluster(index) = index2
          trajindex(index) = index3
-         snappot(index) = temppot
-         levelindex(index) = ceiling(dble(index)*nlevel/nsnap)
+         potentialPerSnap(index) = temppot
+         levelIndex(index) = ceiling(dble(index)*nlevel/cvFrameNumber)
       enddo
-      close(iofile)
-      call tram_analysis(tpm, reducedtcmindex)
+      close(ioFile)
+      call TramAnalysis(tpm, reducedTCMIndex)
       deallocate(logvk, fk, logrk, unbiased_energy, nk, leveltcm, biask, snapindex)
    end subroutine
 
-   subroutine tram_analysis(tpm, reducedTcmIndex)
+   subroutine TramAnalysis(tpm, reducedTCMIndex)
       use mpi
       real*8, allocatable :: tpm(:, :)
-      integer, allocatable :: reducedTcmIndex(:)
-      integer :: i, iofile
+      integer, allocatable :: reducedTCMIndex(:)
+      integer :: i, ioFile
 
-      if ( procid > 1 ) return
-      call loginfo("Perfom Tram Analysis")
-      write(*, "(a,i5,5x,a,100f10.3)")"nlevel ",nlevel,"kelvinarray ",kelvinarray(1:nlevel)
+      if ( procId > 1 ) return
+      call LogInfo("Perfom Tram Analysis")
+      write(*, "(a,i5,5x,a,100f10.3)")"nlevel ",nlevel,"kelvinArray ",kelvinArray(1:nlevel)
 
-      call checkConnect(tpm, reducedTcmIndex)
-      call markov_tram(leveltcm, nk, biask, nsnap, ncluster, nlevel)
-      call tram_result(tpm, reducedTcmIndex)
+      call checkConnect(tpm, reducedTCMIndex)
+      call markov_tram(leveltcm, nk, biask, cvFrameNumber, ncluster, nlevel)
+      call tram_result(tpm, reducedTCMIndex)
 
       write(*,"(a)") "the pi and tpm has been write in the info/tram_tpm.txt file"
       write(*, "(a, I6, a)") "After tram analysis, the system has ", size(tpm, 1), " clusters"
-      call getfreeunit(iofile)
-      open(unit=iofile, file=trim(resultdir)//"/tram_tpm.txt", action="write")
-      write(iofile, "(10E13.6)") pi
+      call GetFreeUnit(ioFile)
+      open(unit=ioFile, file=trim(resultDir)//"/tram_tpm.txt", action="write")
+      write(ioFile, "(10E13.6)") pi
       do i = 1, size(tpm, 1)
-         write(iofile, "(10E13.6)") tpm(i, :)
+         write(ioFile, "(10E13.6)") tpm(i, :)
       enddo
-      close(iofile)
+      close(ioFile)
       write(*, "(10E12.4)") pi
-      call loginfo()
+      call LogInfo()
    end subroutine
 
-   subroutine checkConnect(tpm, reducedTcmIndex)
+   subroutine checkConnect(tpm, reducedTCMIndex)
       implicit none
       real*8, allocatable :: tpm(:, :)
-      integer, allocatable :: reducedTcmIndex(:)
+      integer, allocatable :: reducedTCMIndex(:)
       integer :: ilevel, isnap, iclu, i, j, count
       real*8 :: betak
       real*8, DIMENSION(1:ncluster, 1:ncluster):: temparray2d
       logical, DIMENSION(1:ncluster, 1:nlevel) :: levelKeepSet ! .true. for keep, .false. for remove
 
-      allocate(nk(ncluster, nlevel), leveltcm(ncluster, ncluster, nlevel), biask(nsnap, nlevel), &
-               snapindex(nsnap), unbiased_keep(ncluster), ifKeepArray(ncluster))
+      allocate(nk(ncluster, nlevel), leveltcm(ncluster, ncluster, nlevel), biask(cvFrameNumber, nlevel), &
+               snapindex(cvFrameNumber), unbiased_keep(ncluster), ifKeepArray(ncluster))
 
       temparray2d = 0d0; nk=0d0; leveltcm = 0d0; biask=0d0
 
       !find connected sets and project connected sets
-      do isnap = 1, nsnap
-         nk(maptocluster(isnap), levelindex(isnap)) = nk(maptocluster(isnap), levelindex(isnap)) + 1.0d0
+      do isnap = 1, cvFrameNumber
+         nk(maptocluster(isnap), levelIndex(isnap)) = nk(maptocluster(isnap), levelIndex(isnap)) + 1.0d0
       enddo
 
       do ilevel=1,nlevel
-         do isnap=1,nsnap
-            betak = 1d0/(gasconst*kelvinarray(ilevel))
-            biask(isnap,ilevel) = biask(isnap,ilevel)+snappot(isnap)*( betak - 1d0/(gasconst*kelvinarray(1)) )
+         do isnap=1,cvFrameNumber
+            betak = 1d0/(GasConstant*kelvinArray(ilevel))
+            biask(isnap,ilevel) = biask(isnap,ilevel)+potentialPerSnap(isnap)*( betak - 1d0/(GasConstant*kelvinArray(1)) )
          end do
-         do isnap=1,nsnap-lagstep
-            i=maptocluster(isnap); j=maptocluster(isnap+lagstep)
-            if ( (ifcutcluster(i)==1) .or. (ifcutcluster(j)==1) ) cycle
-            if ( trajindex(isnap) /= trajindex(isnap+lagstep) ) cycle
-            if ( levelindex(isnap) == ilevel ) leveltcm(i,j,ilevel)=leveltcm(i,j,ilevel)+1.0d0
+         do isnap=1,cvFrameNumber-lagStep
+            i=maptocluster(isnap); j=maptocluster(isnap+lagStep)
+            if ( (ifTrimCluster(i)==1) .or. (ifTrimCluster(j)==1) ) cycle
+            if ( trajindex(isnap) /= trajindex(isnap+lagStep) ) cycle
+            if ( levelIndex(isnap) == ilevel ) leveltcm(i,j,ilevel)=leveltcm(i,j,ilevel)+1.0d0
          end do
       end do
 
@@ -130,9 +131,9 @@ contains
          enddo
       enddo
 
-      ! change the nsnap array, if the snap has been removed, then set the index to -1
-      do i = 1, nsnap
-         j = levelindex(i)
+      ! change the cvFrameNumber array, if the snap has been removed, then set the index to -1
+      do i = 1, cvFrameNumber
+         j = levelIndex(i)
          if (levelKeepSet(maptocluster(i), j) .eqv. .true.) then
             snapindex(i) = maptocluster(i)
          else
@@ -145,21 +146,21 @@ contains
       do i = 1, ncluster
          if(levelKeepSet(i, 1)) count = count+1;
       enddo
-      allocate(tpm(count, count), pi(count), reducedTcmIndex(count))
+      allocate(tpm(count, count), pi(count), reducedTCMIndex(count))
 
       j = 1
       do i = 1, ncluster
          if(levelKeepSet(i, 1)) then
-            reducedTcmIndex(j) = i
+            reducedTCMIndex(j) = i
             j = j+ 1
          endif
       enddo
    end subroutine
 
-   subroutine markov_tram(subTcm, subNk, subBiask, tpnsnap, tpncluster, tpnlevel)
+   subroutine markov_tram(subTcm, subNk, subBiask, tpcvFrameNumber, tpncluster, tpnlevel)
       implicit none
       real*8, INTENT(IN) :: subTcm(:, : ,:), subNk(:, :), subBiask(:, :)
-      integer, INTENT(IN) :: tpnsnap, tpncluster, tpnlevel
+      integer, INTENT(IN) :: tpcvFrameNumber, tpncluster, tpnlevel
       integer :: iclu,jclu,ilevel,iter,isnap,i,j
       real*8 :: temparray(tpncluster), temparray2(tpnlevel), tpsum, tpsum2, tramerror, errormark, tempreal
       real*8,dimension(1:tpncluster,1:tpnlevel) :: newlogvk,newfk, stat_vectors, old_stat_vectors
@@ -251,7 +252,7 @@ contains
 
          !calculation of  f_i^k, eq(19)
          newfk = inf
-         do isnap = 1, tpnsnap
+         do isnap = 1, tpcvFrameNumber
             if (snapindex(isnap) < 0) cycle
             i = 1
             j = snapindex(isnap)
@@ -294,7 +295,7 @@ contains
 
       ! get conf energies(temparray)
       unbiased_energy = inf
-      do isnap = 1, tpnsnap
+      do isnap = 1, tpcvFrameNumber
          if(snapindex(isnap) < 0) cycle
          i = 1; j=snapindex(isnap)
          do ilevel = 1,tpnlevel
@@ -313,10 +314,10 @@ contains
       unbiased_energy = unbiased_energy -tempreal
    end subroutine
 
-   subroutine tram_result(tpm, reducedTcmIndex)
+   subroutine tram_result(tpm, reducedTCMIndex)
       implicit none
       real*8, intent(inout), allocatable :: tpm(:, :)
-      integer, intent(inout), allocatable :: reducedTcmIndex(:)
+      integer, intent(inout), allocatable :: reducedTCMIndex(:)
       logical :: mask(ncluster, ncluster)
       integer :: ilevel, i, j, isnap, count, nums_scc, unbiased_count
       real*8 :: tpsum, tempdouble, temp_tpm(ncluster, ncluster), row_sum(ncluster)
@@ -373,23 +374,23 @@ contains
       do i = 1, size(tpm, 1)
          if(label(i) /= 1) then
             count = count + 1
-            unbiased_keep(reducedTcmIndex(i)) = .false.
-            mask(reducedTcmIndex(i), :) = .false.
-            mask(:, reducedTcmIndex(i)) = .false.
+            unbiased_keep(reducedTCMIndex(i)) = .false.
+            mask(reducedTCMIndex(i), :) = .false.
+            mask(:, reducedTCMIndex(i)) = .false.
          endif
       enddo
 
       if (count > 0) then
          unbiased_count = unbiased_count - count
-         DEALLOCATE(tpm, reducedTcmIndex, pi)
+         DEALLOCATE(tpm, reducedTCMIndex, pi)
          allocate(tpm(unbiased_count, unbiased_count), pi(unbiased_count), &
-                  reducedTcmIndex(unbiased_count))
+                  reducedTCMIndex(unbiased_count))
       endif
 
       tpm = reshape(pack(temp_tpm, mask), [unbiased_count, unbiased_count])
       pi = exp(pack(-unbiased_energy, unbiased_keep)) /  &
          sum(exp(pack(-unbiased_energy, unbiased_keep)))
-      reducedTcmIndex = pack([(i, i=1, ncluster)], unbiased_keep)
+      reducedTCMIndex = pack([(i, i=1, ncluster)], unbiased_keep)
       deallocate(label)
    end subroutine
 

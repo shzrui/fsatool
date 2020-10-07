@@ -1,174 +1,183 @@
 module cluster
-  use math, only: math_lRMSD, math_euclidean_distance, math_normalization
-  use mpi_shared_memory
+  use math, only: MathAtomRMSD, MathEuclideanDistanceSquare, MathNormalization
+  use MPISharedMemory
   use util
-  use mod_global
+  use GlobalVariable
   use netcdf_func
   implicit none
   integer,dimension(:),allocatable :: maptocluster, centersnaps, numberincluster
+  integer :: rmsdAtomNumber
 contains
 
-  subroutine cluster_analysis()
+  subroutine ClusterAnalysis()
     use mpi
     integer :: stat, i, j, ierr
     real*8, pointer :: normalized_cvs(:, :)
+    integer, ALLOCATABLE :: subsetTrajIndex(:)
     integer :: win_normalized_shared
 
-    call allocate_shared_memory_for_2dim_array([ndim, nsnap], normalized_cvs, win_normalized_shared)
+    call MPISharedMemoryAllocate2DimDoubleArray([cvDegree, cvFrameNumber], normalized_cvs, win_normalized_shared)
 
-    if (trajtype == 0) then
+    if (trajType == 0) then
       if (shared_id == 0) then
-        call math_normalization(cvs, normalized_cvs, ndim, nsnap)
+        call MathNormalization(cvs, normalized_cvs, cvDegree, cvFrameNumber)
       endif
     endif
+
     call mpi_win_fence(0, win_normalized_shared, ierr)
 
-    if (trim(clustermethod) == "kmeans") then
-       if(procid == 0) call loginfo("Running Kmeans++ Cluster Algorithm")
-       call cluster_kmeans(normalized_cvs, ndim, ncluster, nsnap, clustercycle, stat, math_euclidean_distance)
-    elseif (trim(clustermethod)=="kmedoids") then
-      if(procid == 0) call loginfo("Running Kmedoids Cluster Algorithm")
-      call cluster_kmedoids(normalized_cvs, ndim, ncluster, nsnap, clustercycle, stat, math_euclidean_distance)
-    elseif (trim(clustermethod) == "coordinate") then
-      if(procid == 0) call loginfo("Running Kmedoids Coordinate Cluster Algorithm")
-      call cluster_kmedoids(traj, ndim, ncluster, nsnap, clustercycle, stat, math_lRMSD)
+    if (trim(clusterMethod) == "kmeans") then
+       if(procId == 0) call LogInfo("Running Kmeans++ Cluster Algorithm")
+       call ClusterKmeans(normalized_cvs, cvDegree, ncluster, cvFrameNumber, clusterCycle, stat, MathEuclideanDistanceSquare)
+    elseif (trim(clusterMethod)=="kmedoids") then
+      if(procId == 0) call LogInfo("Running Kmedoids Cluster Algorithm")
+      call ClusterKmedoids(normalized_cvs, cvDegree, ncluster, cvFrameNumber, clusterCycle, stat, MathEuclideanDistanceSquare)
+    elseif (trajType /= 0 .and. trim(clusterMethod) == "coordinate") then
+      if(procId == 0) call LogInfo("Running Kmedoids Coordinate Cluster Algorithm")
+      call GetRMSDAtomNumber(rmsdAtomNumber)
+      if(atomDegree /= rmsdAtomNumber * 3) then
+        write(*, "(A, I4, A)") "Using subset Atom Index for RMSD Calcualtion, contains ", rmsdAtomNumber, " atoms: "
+        write(*, "(10I6)") clusterAtomIndex(1:rmsdAtomNumber)
+        allocate(subsetTrajIndex(rmsdAtomNumber*3))
+        do i = 1, rmsdAtomNumber
+            subSetTrajIndex(3*i - 2) = 3 * clusterAtomIndex(i) - 2
+            subSetTrajIndex(3*i - 1) = 3 * clusterAtomIndex(i) - 1
+            subSetTrajIndex(3*i) = 3 * clusterAtomIndex(i)
+        enddo
+        call ClusterKmedoids(traj(subsetTrajIndex, :), rmsdAtomNumber*3, ncluster, cvFrameNumber, clusterCycle, stat, MathAtomRMSD)
+        deallocate(subsetTrajIndex)
+      else 
+        call ClusterKmedoids(traj , atomDegree, ncluster, cvFrameNumber, clusterCycle, stat, MathAtomRMSD)
+      endif
     else
-       if(procid == 0) call errormsg("clustermethod must choose be kmeans, kmedoids or coordinate")
+       if(procId == 0) call ErrorMessage("clusterMethod must choose be kmeans, kmedoids or coordinate")
     endif
 
-    if(procid == 0) then
-      write(*, "(a, I4,2x,a)") trim(clustermethod) // " has ", ncluster, "clusters"
-      if (stat >= clustercycle) then
-          write(*, "(a,I4,2x,a)")"clustering has run", stat, "iterations, maybe increase clustercycle larger"
+    if(procId == 0) then
+      write(*, "(a, I4,2x,a)") trim(clusterMethod) // " has ", ncluster, "clusters"
+      if (stat >= clusterCycle) then
+          write(*, "(a,I4,2x,a)")"clustering has run", stat, "iterations, maybe increase clusterCycle larger"
       else
           write(*, "(a,I4,2x,a)")"clustering  has run", stat, "iterations and converged"
       end if
-      call loginfo()
+      call LogInfo()
     endif
     call mpi_win_fence(0, win_normalized_shared, ierr)
     call mpi_win_free(win_normalized_shared, ierr)
-    ! call deallocate_shared_memory()
-  end subroutine cluster_analysis
+    ! call MPISharedMemoryDeallocate()
+  end subroutine ClusterAnalysis
 
-  subroutine mod_cluster(inputfile, resultfile)
+  subroutine ModCluster(inputFile, resultFile)
     use mpi
 
-    logical :: file_exist
-    integer :: iofile, ierr, i, num_file, shared_win, randomseed
-    integer, allocatable :: seed_array(:)
+    integer :: ioFile, ierr, i, numFile, shared_win
     real*8 :: start, finish
-    character(256) :: inputfile, resultfile
-    character(256), dimension(100) :: datafile
-    namelist /cluster/ ncluster, clustercycle, clustermethod, datafile, ndim, nsnap, trajtype, randomseed
+    character(256) :: inputFile, resultFile
+    character(256), dimension(100) :: dataFile
+    namelist /cluster/ ncluster, clusterCycle, clusterMethod, dataFile, trajType, randomSeed, clusterAtomIndex
 
-    clustercycle = 400
-    trajtype = 0
-    datafile = ""
-    randomseed = -1
+    clusterCycle = 400
+    trajType = 0
+    dataFile = ""
+    randomSeed = -1
+    clusterAtomIndex = 0
 
-    if (procid == 0) then
-      call cpu_time(start)
-      call getfreeunit(iofile)
-      open(unit = iofile, file=trim(inputfile), action="read")
-      read(iofile, nml=cluster, iostat=ierr)
-      if (ierr < 0 ) call errormsg("error in reading the cluster namelists")
-      close(iofile)
+    if (procId == 0) then
+      call CPU_TIME(start)
+      call GetFreeUnit(ioFile)
+      OPEN(unit = ioFile, file=trim(inputFile), action="read")
+      READ(ioFile, nml=cluster, iostat=ierr)
+      if (ierr < 0 ) call ErrorMessage("error in reading the cluster namelists")
+      close(ioFile)
 
-      if (randomseed == -1) then
+      if (randomSeed == -1) then
         call init_random_seed()
       else
-        write(*, *) "RANDOM SEED is", randomseed
-        call random_seed(size=i)
-        allocate(seed_array(i))
-        seed_array = randomseed
-        call random_seed(put=seed_array)
-        deallocate(seed_array)
+        call RestoreRandomSeed(randomSeed)
       endif
-     
-      i = 1
-      do 
-        if(trim(datafile(i)) /= "") then
-           i = i + 1 
-        else
-            exit
-        endif
-      enddo
-      num_file = i-1
+
+      call GetFileNumber(dataFile, numFile)
+
+      if (trajType == 0) then
+        call GetCvFileInfo(dataFile, numFile, cvFrameNumber, cvDegree, 1)        
+      else if (trajType == 2) then
+        call GetNetcdfInfo(dataFile, numFile, cvFrameNumber, atomDegree)
+        call GetRMSDAtomNumber(rmsdAtomNumber)
+      endif
     endif
 
     call mpi_bcast(ncluster, 1, mpi_int, 0, mpi_comm_world, ierr)
-    call mpi_bcast(ndim, 1, mpi_int, 0, mpi_comm_world, ierr)
-    call mpi_bcast(nsnap, 1, mpi_int, 0, mpi_comm_world, ierr)
-    call mpi_bcast(clustermethod, len(clustermethod), mpi_char, 0, mpi_comm_world, ierr)
-    call mpi_bcast(clustercycle, 1, mpi_int, 0, mpi_comm_world, ierr)
-    call mpi_bcast(trajtype, 1, mpi_int, 0, mpi_comm_world, ierr)
-    call mpi_bcast(num_file, 1, mpi_int, 0, mpi_comm_world, ierr)
-    call mpi_bcast(datafile, 256*num_file, mpi_char, 0, mpi_comm_world, ierr)
+    call mpi_bcast(cvDegree, 1, mpi_int, 0, mpi_comm_world, ierr)
+    call mpi_bcast(atomDegree, 1, mpi_int, 0, mpi_comm_world, ierr)
+    call mpi_bcast(cvFrameNumber, 1, mpi_int, 0, mpi_comm_world, ierr)
+    call mpi_bcast(clusterMethod, len(clusterMethod), mpi_char, 0, mpi_comm_world, ierr)
+    call mpi_bcast(clusterCycle, 1, mpi_int, 0, mpi_comm_world, ierr)
+    call mpi_bcast(trajType, 1, mpi_int, 0, mpi_comm_world, ierr)
+    call mpi_bcast(numFile, 1, mpi_int, 0, mpi_comm_world, ierr)
+    call mpi_bcast(dataFile, 256*numFile, mpi_char, 0, mpi_comm_world, ierr)
 
-    if(ncluster < procnum) STOP "procnum  must be less than the ncluster"
-    if(nsnap < procnum) STOP "procnum  must be less than the nsnap"
+    if(ncluster < procNum) STOP "procNum must be less than the ncluster"
+    if(cvFrameNumber < procNum) STOP "procNum must be less than the cvFrameNumber"
 
-    call init_shared_memory(mpi_comm_world)
+    call InitalizeSharedMemory(mpi_comm_world)
 
-    if (trajtype == 0) then
-      call allocate_shared_memory_for_2dim_array((/ndim, nsnap/), cvs, shared_win)
+    if (trajType == 0) then
+      call MPISharedMemoryAllocate2DimDoubleArray((/cvDegree, cvFrameNumber/), cvs, shared_win)
     else
-      call allocate_shared_memory_for_2dim_array((/ndim, nsnap/), traj, shared_win)
+      call MPISharedMemoryAllocate2DimDoubleArray((/atomDegree, cvFrameNumber/), traj, shared_win)
     endif
 
     if (shared_id == 0) then
-      if (trajtype == 0) then
-          inquire(file=datafile(1), exist=file_exist)
-          if (.not. file_exist) STOP "Data file not exist"
-          call getfreeunit(iofile)
-          open(unit = iofile, file=trim(datafile(1)), action="read")
-          read(iofile, *) cvs
-          close(iofile)
-      else if(trajtype == 2) then
-        call loginfo("Running Coordinate Cluster Algorithm")
-        call read_NCcoorfile_into_coor(datafile, num_file, ndim, traj, 1)
+      if (trajType == 0) then
+        call CheckFileAndOpen(dataFile(1), ioFile)
+        read(ioFile, *) cvs
+        call CheckFileAndClose(ioFile)
+      else if(trajType == 2) then
+        call LogInfo("Running Coordinate Cluster Algorithm")
+        call NetcdfReadCoordinate(dataFile, numFile, atomDegree, traj, 1)
       endif
     endif
+
     call mpi_win_fence(0, shared_win, ierr)
-    call cluster_analysis()
-    if (procid == 0) then
-      call getfreeunit(iofile)
-      open(unit = iofile, file=trim(resultfile), action="write")
-      do i = 1, nsnap
-          write(iofile, *) maptocluster(i), centersnaps(maptocluster(i))
+    call ClusterAnalysis()
+    if (procId == 0) then
+      call GetFreeUnit(ioFile)
+      open(unit = ioFile, file=trim(resultFile), action="write")
+      do i = 1, cvFrameNumber
+          write(ioFile, *) maptocluster(i), centersnaps(maptocluster(i))
       enddo
-      close(iofile)
+      close(ioFile)
       resultDir="./"
-      if(trajtype==2) call write_coor_cluster_result(traj, ndim, nsnap, [(i,i=1,ncluster)], resultDir)
-      call cpu_time(finish)
+      if (trajType==2) call ClusterWriteCoordianteResultToNetcdfFile(traj, atomDegree, cvFrameNumber, [(i,i=1,ncluster)], resultDir)
+      call CPU_TIME(finish)
       write(*, "(a, f8.2, a)") "The cluster program has run ", finish-start, " seconds"
     endif
   end subroutine
 
-  subroutine cluster_kmeans_init(coor, nsnap, ndim, ncluster, dist_function, clusterCenterIndex)
+  subroutine ClusterKmeansPlusPlusInitCentroids(coor, cvFrameNumber, cvDegree, ncluster, DistanceFunction, clusterCenterIndex)
     use mpi
-    integer, intent(in) :: nsnap, ndim, ncluster
-    real*8, intent(in) :: coor(ndim, nsnap)
+    integer, intent(in) :: cvFrameNumber, cvDegree, ncluster
+    real*8, intent(in) :: coor(cvDegree, cvFrameNumber)
     integer,intent(out)  :: clusterCenterIndex(ncluster)
-    external :: dist_function
+    external :: DistanceFunction
 
     integer :: i, j, left_snap, right_snap, snap_length, ierr
-    real*8 :: weights(nsnap)
+    real*8 :: weights(cvFrameNumber)
     real*8 :: ran, tot, dist2, sub_tot
     real*8 , allocatable :: sub_dist2s(:), sub_weights(:)
-    integer, dimension(procnum) :: snap_displs, snap_counts
+    integer, dimension(procNum) :: snap_displs, snap_counts
 
-    if(procid == 0) then
+    if(procId == 0) then
       write(*, "(a)") "Using kmeans++ to select initial center "
     endif
 
-    call partition_process(procnum, nsnap, snap_displs, snap_counts, left_snap, right_snap)
+    call PartitionCPUProcessors(procNum, cvFrameNumber, snap_displs, snap_counts, left_snap, right_snap)
     snap_length = right_snap - left_snap + 1
     allocate(sub_dist2s(snap_length), sub_weights(snap_length))
 
-    if(procid == 0) then
+    if(procId == 0) then
       call random_number(ran)
-      j = int(ran*nsnap) + 1
+      j = int(ran*cvFrameNumber) + 1
     endif
 
     call mpi_bcast(j, 1, mpi_integer, 0, mpi_comm_world, ierr)
@@ -178,7 +187,7 @@ contains
     do i = 2, ncluster
       sub_tot = 0
       do j = left_snap, right_snap
-        call dist_function(coor(:, j), coor(:, clusterCenterIndex(i-1)), dist2, ndim)
+        call DistanceFunction(coor(:, j), coor(:, clusterCenterIndex(i-1)), dist2, cvDegree)
         if (dist2 < sub_weights(j-left_snap+1)) sub_weights(j-left_snap+1) = dist2
         sub_tot = sub_tot + sub_weights(j-left_snap+1)
       enddo
@@ -186,94 +195,94 @@ contains
                       snap_counts, snap_displs, mpi_double, 0, mpi_comm_world, ierr)
       call mpi_reduce(sub_tot, tot, 1, mpi_double, mpi_sum, 0, mpi_comm_world, ierr)
       
-      if (procid == 0) then
+      if (procId == 0) then
         call random_number(ran)
         ran = ran * tot
         tot = 0
-        do j = 1, nsnap
+        do j = 1, cvFrameNumber
           tot = tot + weights(j)
           if (tot > ran) exit
         enddo
       endif
       call mpi_bcast(j, 1, mpi_integer, 0, mpi_comm_world, ierr)
       clusterCenterIndex(i) = j
-      if(procid == 0) then
+      if(procId == 0) then
         if( mod (i, 20) == 0) write(*, *) "Kmeans++ init subroutine generates ", i, " centers"
       endif
     enddo
     deallocate(sub_weights, sub_dist2s)
   end subroutine
 
-  subroutine cluster_kmeans(coor, ndim, ncluster, nsnap, niter, stat, dist_function)
+  subroutine ClusterKmeans(coor, cvDegree, ncluster, cvFrameNumber, niter, stat, DistanceFunction)
     use mpi
-    integer,intent(in) :: ncluster, nsnap, niter, ndim
-    external :: dist_function
+    integer,intent(in) :: ncluster, cvFrameNumber, niter, cvDegree
+    external :: DistanceFunction
     integer :: i, j, k, last_center, now_center, stat
     real*8 :: dist2, maxnum, minnum, tolerance, center_shift
-    real*8 :: coor(ndim, nsnap), coor_center(ndim, ncluster), temp_dist(ncluster)
-    real*8 :: old_coor_center(ndim, ncluster)
+    real*8 :: coor(cvDegree, cvFrameNumber), coor_center(cvDegree, ncluster), temp_dist(ncluster)
+    real*8 :: old_coor_center(cvDegree, ncluster)
     real*8, allocatable :: sub_coor(:, :)
     integer, allocatable :: sub_maptocluster(:)
-    real*8 :: subsums(ndim, ncluster), sums(ndim, ncluster)
+    real*8 :: subsums(cvDegree, ncluster), sums(cvDegree, ncluster)
     integer :: subnumbers(ncluster), numbers(ncluster)
     logical :: continue_run
-    integer, DIMENSION(procnum) :: displs, counts
+    integer, DIMENSION(procNum) :: displs, counts
     integer :: left, right, length
     integer :: ierr
 
     tolerance = 1e-5
 
-    allocate(maptocluster(nsnap), centersnaps(ncluster), numberincluster(ncluster))
+    allocate(maptocluster(cvFrameNumber), centersnaps(ncluster), numberincluster(ncluster))
     ! allocate(centersnaps(ncluster))
-    call cluster_kmeans_init(coor, nsnap, ndim, ncluster, dist_function, centersnaps)
+    call ClusterKmeansPlusPlusInitCentroids(coor, cvFrameNumber, cvDegree, ncluster, DistanceFunction, centersnaps)
 
-    if (procid == 0) then
+    if (procId == 0) then
       do i = 1, ncluster
         coor_center(:, i) = coor(:, centersnaps(i))
       enddo
     endif
 
-    call partition_process(procnum, nsnap, displs, counts, left, right)
+    call PartitionCPUProcessors(procNum, cvFrameNumber, displs, counts, left, right)
 
     length = right - left + 1
-    allocate(sub_coor(ndim, length), sub_maptocluster(length))
+    allocate(sub_coor(cvDegree, length), sub_maptocluster(length))
 
     ! broadcast the coordinate and scatter the data
-    call mpi_bcast(coor_center, ncluster*ndim, mpi_double, 0, mpi_comm_world, ierr)
-    call mpi_scatterv(coor, ndim*counts, ndim*displs, mpi_double, sub_coor, length*ndim, mpi_double, 0, mpi_comm_world, ierr)
-    ! call mpi_barrier(mpi_comm_world, ierr)
+    call mpi_bcast(coor_center, ncluster*cvDegree, mpi_double, 0, mpi_comm_world, ierr)
+    call mpi_scatterv(coor, cvDegree*counts, cvDegree*displs, mpi_double, sub_coor, & 
+                     length*cvDegree, mpi_double, 0, mpi_comm_world, ierr)
 
     old_coor_center = coor_center
     j = 0 
 
     do while (j < niter)
       j = j + 1
-      call assignToKmeansCluster(sub_coor, coor_center, sub_maptocluster, subSums, subnumbers, dist_function)
+      call AssignSnapsToKmeansCentroids(sub_coor, coor_center, sub_maptocluster, subSums, subnumbers, DistanceFunction)
       call mpi_gatherv(sub_maptocluster, length, mpi_int, maptocluster, counts, displs, mpi_int, 0, mpi_comm_world, ierr)
-      call mpi_reduce(subsums, sums, ncluster*ndim, mpi_double, mpi_sum, 0, mpi_comm_world, ierr)
+      call mpi_reduce(subsums, sums, ncluster*cvDegree, mpi_double, mpi_sum, 0, mpi_comm_world, ierr)
       call mpi_reduce(subnumbers, numberincluster, ncluster, mpi_int, mpi_sum, 0, mpi_comm_world, ierr)
-      if (procid == 0) then
+      if (procId == 0) then
         center_shift = 0d0
         do i = 1, ncluster
           coor_center(:, i) = sums(:, i) / numberincluster(i)
-          call dist_function(coor_center(:, i), old_coor_center(:, i), dist2, ndim)
+          call DistanceFunction(coor_center(:, i), old_coor_center(:, i), dist2, cvDegree)
           center_shift = center_shift + sqrt(dist2)
         enddo
         if(mod(j, 20) == 0) then
-          write(*, "(a, I5, a, F8.5)") "kmeans has run", j ," iterations, the center shift is ", center_shift**2
+          write(*, "(a, I5, a, F8.5)") "kmeans has run", j ," iterations, center shift is ", center_shift**2
         endif
       endif
-      call mpi_bcast(coor_center, ndim*ncluster, mpi_double, 0, mpi_comm_world, ierr)
+      call mpi_bcast(coor_center, cvDegree*ncluster, mpi_double, 0, mpi_comm_world, ierr)
       call mpi_bcast(center_shift, 1, mpi_double, 0, mpi_comm_world, ierr)
       old_coor_center = coor_center
       if(center_shift**2 < tolerance) exit
     enddo
 
     ! finalize the kmeans cluster
-    if(procid == 0) then
+    if(procId == 0) then
       temp_dist = 1e9; stat = j
-      do i = 1, nsnap
-        call dist_function(coor(:, i), coor_center(:, maptocluster(i)), dist2, ndim)
+      do i = 1, cvFrameNumber
+        call DistanceFunction(coor(:, i), coor_center(:, maptocluster(i)), dist2, cvDegree)
         if (dist2 < temp_dist(maptocluster(i))) then
             centersnaps(maptocluster(i)) = i
             temp_dist(maptocluster(i)) = dist2
@@ -282,9 +291,9 @@ contains
     endif
   end subroutine
 
-  subroutine assignToKmeansCluster(data, center, assignment, sums, number, dist_function)
+  subroutine AssignSnapsToKmeansCentroids(data, center, assignment, sums, number, DistanceFunction)
     real*8 :: data(:, :), center(: ,:), sums(:, :)
-    external :: dist_function
+    external :: DistanceFunction
     integer :: number(:)
     integer :: assignment(:), i, j
     real*8 :: min_dist
@@ -295,7 +304,7 @@ contains
     do i = 1, size(data, 2)
         min_dist = 1e9
         do j = 1, size(center, 2)
-            call dist_function(data(:, i), center(:, j), dist2, ndim)
+            call DistanceFunction(data(:, i), center(:, j), dist2, cvDegree)
             if (dist2 < min_dist) then
                 min_dist = dist2
                 assignment(i) = j
@@ -306,64 +315,65 @@ contains
     enddo
   end subroutine
 
-  subroutine cluster_kmedoids(coor, ndim, ncluster, nsnap, niter, stat, dist_function)
+  subroutine ClusterKmedoids(coor, cvDegree, ncluster, cvFrameNumber, niter, stat, DistanceFunction)
     use mpi
-    integer, intent(in) :: ncluster, nsnap, niter, ndim 
-    real*8,  intent(in) :: coor(ndim, nsnap)
+    integer, intent(in) :: ncluster, cvFrameNumber, niter, cvDegree 
+    real*8,  intent(in) :: coor(cvDegree, cvFrameNumber)
     integer, intent(out) :: stat
-    external :: dist_function
+    external :: DistanceFunction
 
     integer :: i
     real*8 ::  percent
 
-    allocate(maptocluster(nsnap), centersnaps(ncluster), numberincluster(ncluster))
+    allocate(maptocluster(cvFrameNumber), centersnaps(ncluster), numberincluster(ncluster))
 
-    if (nsnap<5000) then ! calculate distance matrix
-      call kmedoids_smalldata(coor, ndim, ncluster, nsnap, niter, stat, dist_function)
+    if (cvFrameNumber<1000) then ! calculate distance matrix
+      call ClusterKmedoidsSmallData(coor, cvDegree, ncluster, cvFrameNumber, niter, stat, DistanceFunction)
     else
-      if (procid == 0) then
-        write(*, *)"nsnap is too large, unable to construct distance matrix, Using CLARANS method"
+      if (procId == 0) then
+        write(*, *)"Frame Number is too large, unable to construct distance matrix, Using CLARANS method"
       endif
-      percent = 100 / dble(nsnap)
-      if(procid == 0) then 
-        print*, "Maximum Generate number of test point is :" , int(percent * nsnap)
+      percent = 500 / dble(cvFrameNumber)
+      !percent = 1
+      if(procId == 0) then 
+        print*, "Maximum Generate number of test point is :" , int(percent * cvFrameNumber)
       endif
-      call  kmedoids_largedata(coor, ndim, ncluster, nsnap, niter, percent, stat, dist_function)
+      call  ClusterKmedoidsLargeData(coor, cvDegree, ncluster, cvFrameNumber, niter, percent, stat, DistanceFunction)
     end if
     do i = 1, ncluster
       numberincluster(i) = count(maptocluster == i)
     enddo
-  end subroutine cluster_kmedoids
+  end subroutine ClusterKmedoids
 
-  subroutine kmedoids_smalldata(coor, ndim, ncluster, nsnap, niter, stat, dist_function)
+  subroutine ClusterKmedoidsSmallData(coor, cvDegree, ncluster, cvFrameNumber, niter, stat, DistanceFunction)
     use util
     use mpi
-    integer, intent(in):: ndim, ncluster, nsnap, niter
+    integer, intent(in):: cvDegree, ncluster, cvFrameNumber, niter
     integer, intent(out) :: stat
-    real*8, intent(in) :: coor(ndim, nsnap)
-    external :: dist_function
+    real*8, intent(in) :: coor(cvDegree, cvFrameNumber)
+    external :: DistanceFunction
 
     real*8, pointer :: distmat(:, :)
     real*8 :: min_value
     integer :: shared_distmat_win, left, right, ierr
-    integer, dimension(procnum) :: counts, displs
+    integer, dimension(procNum) :: counts, displs
     integer, allocatable :: oneclusterindex(:)
-    integer :: i, j, k, temparray(nsnap), temparray2(nsnap), nowcentersnap(ncluster)
+    integer :: i, j, k, temparray(cvFrameNumber), temparray2(cvFrameNumber), nowcentersnap(ncluster)
 
-    call partition_process(procnum, nsnap, displs, counts, left, right)
-    call allocate_shared_memory_for_2dim_array([nsnap, nsnap], distmat, shared_distmat_win)
+    call PartitionCPUProcessors(procNum, cvFrameNumber, displs, counts, left, right)
+    call MPISharedMemoryAllocate2DimDoubleArray([cvFrameNumber, cvFrameNumber], distmat, shared_distmat_win)
 
     do i = left, right
-      do j = i + 1, nsnap
-        call dist_function(coor(:, i), coor(:, j), distmat(i, j), ndim)
+      do j = i + 1, cvFrameNumber
+        call DistanceFunction(coor(:, i), coor(:, j), distmat(i, j), cvDegree)
         distmat(j, i) = distmat(i, j)
       enddo
     enddo
 
     call mpi_win_fence(0, shared_distmat_win, ierr)
-    call cluster_kmeans_init(coor, nsnap, ndim, ncluster, dist_function, centersnaps)
-    if(procid ==  0) then
-      temparray = (/(i, i=1,nsnap)/)
+    call ClusterKmeansPlusPlusInitCentroids(coor, cvFrameNumber, cvDegree, ncluster, DistanceFunction, centersnaps)
+    if(procId ==  0) then
+      temparray = (/(i, i=1,cvFrameNumber)/)
       stat=niter
       do i=1, niter
         maptocluster = minloc(distmat(centersnaps, :), dim=1)
@@ -388,24 +398,24 @@ contains
     call mpi_win_free(shared_distmat_win, ierr)
   end subroutine
 
-  subroutine kmedoids_largedata(coor, ndim, ncluster, nsnap, niter, percent, stat, dist_function)
+  subroutine ClusterKmedoidsLargeData(coor, cvDegree, ncluster, cvFrameNumber, niter, percent, stat, DistanceFunction)
     use mpi
-    integer, intent(in) :: ncluster, nsnap, ndim, niter
-    real*8,  intent(in) :: coor(ndim, nsnap), percent
+    integer, intent(in) :: ncluster, cvFrameNumber, cvDegree, niter
+    real*8,  intent(in) :: coor(cvDegree, cvFrameNumber), percent
     integer, intent(out) :: stat
-    external :: dist_function
+    external :: DistanceFunction
 
     integer :: newCenterSnaps(ncluster)
     integer :: i, ierr
     real*8 :: time
 
-    call cluster_kmeans_init(coor, nsnap, ndim, ncluster, dist_function, centersnaps)
+    call ClusterKmeansPlusPlusInitCentroids(coor, cvFrameNumber, cvDegree, ncluster, DistanceFunction, centersnaps)
 
     i = 0; stat=0
     do while(i < niter)
-      if(procid == 0 .and. mod(i, 10) == 0) write(*, *) "kmedoids has run ", i, "/", niter, " steps" 
-      call assignToCluster(coor, ncluster, nsnap, ndim, dist_function)
-      call calculateClusterCentroids(coor, ncluster, nsnap, ndim, newCenterSnaps, percent, dist_function)
+      if(procId == 0 .and. i > 0) write(*, *) "kmedoids has run ", i, "/", niter, " steps" 
+      call AssignSnapToKmedoidsCentroids(coor, ncluster, cvFrameNumber, cvDegree, DistanceFunction)
+      call KmedoidsCalculateCentroids(coor, ncluster, cvFrameNumber, cvDegree, newCenterSnaps, percent, DistanceFunction)
       if (all(centersnaps == newCenterSnaps)) exit
       centersnaps = newCenterSnaps
       i = i + 1
@@ -414,21 +424,21 @@ contains
     enddo
   end subroutine
   
-  subroutine assignToCluster(coor, ncluster, nsnap, ndim, dist_function)
+  subroutine AssignSnapToKmedoidsCentroids(coor, ncluster, cvFrameNumber, cvDegree, DistanceFunction)
     use mpi
-    integer, intent(in) :: ncluster, nsnap, ndim
-    real*8, intent(in) :: coor(ndim, nsnap)
-    external :: dist_function
+    integer, intent(in) :: ncluster, cvFrameNumber, cvDegree
+    real*8, intent(in) :: coor(cvDegree, cvFrameNumber)
+    external :: DistanceFunction
 
     integer, allocatable :: sub_maptocluster(:)
     integer :: i, j, ierr
     integer :: left_snap, right_snap, snap_length
-    integer, dimension(procnum) :: snap_displs, snap_counts
+    integer, dimension(procNum) :: snap_displs, snap_counts
     real*8 :: min_value, dist2s
 
 
     ! partition snap
-    call partition_process(procnum, nsnap, snap_displs, snap_counts, left_snap, right_snap)
+    call PartitionCPUProcessors(procNum, cvFrameNumber, snap_displs, snap_counts, left_snap, right_snap)
     snap_length = right_snap - left_snap + 1
 
     allocate(sub_maptocluster(snap_length))
@@ -436,7 +446,7 @@ contains
     do i = left_snap, right_snap
       min_value = huge(1.0)
       do j = 1, ncluster
-        call dist_function(coor(:, i), coor(:, centersnaps(j)), dist2s, ndim)
+        call DistanceFunction(coor(:, i), coor(:, centersnaps(j)), dist2s, cvDegree)
         if(dist2s < min_value)  then
           min_value = dist2s
           sub_maptocluster(i-left_snap+1) = j
@@ -445,28 +455,29 @@ contains
     enddo
     call mpi_allgatherv(sub_maptocluster, snap_length, mpi_integer, maptocluster, snap_counts, &
                         snap_displs, mpi_integer, mpi_comm_world, ierr)
-
     deallocate(sub_maptocluster)
   end subroutine
 
-  subroutine calculateClusterCentroids(coor, ncluster, nsnap, ndim, newCentersnaps, percent, dist_function)
+  subroutine KmedoidsCalculateCentroids(coor, ncluster, cvFrameNumber, cvDegree, &
+    newCentersnaps, percent, DistanceFunction)
     use mpi
-    real*8, intent(in) :: coor(ndim, nsnap), percent
-    integer, intent(in) :: ncluster, nsnap, ndim
+    real*8, intent(in) :: coor(cvDegree, cvFrameNumber), percent
+    integer, intent(in) :: ncluster, cvFrameNumber, cvDegree
     integer, intent(out) :: newCenterSnaps(ncluster)
-    external :: dist_function
+    external :: DistanceFunction
     integer, allocatable :: sub_centersnaps(:)
     integer :: cluster_displs(ncluster), cluster_counts(ncluster)
     integer :: i, j, ierr
     integer :: left_cluster, right_cluster, cluster_length
 
-    call partition_process(procnum, ncluster, cluster_displs, cluster_counts, left_cluster, right_cluster)
+    call PartitionCPUProcessors(procNum, ncluster, cluster_displs, cluster_counts, left_cluster, right_cluster)
     cluster_length = right_cluster - left_cluster + 1
 
     allocate(sub_centersnaps(cluster_length))
 
     do i = left_cluster, right_cluster
-      call calculateSingleClusterCentroids(i, coor, nsnap, sub_centersnaps(i-left_cluster+1), ndim, percent, dist_function)
+      call KmedoidsCalculateSingleClusterCentroids(i, coor, cvFrameNumber, &
+      sub_centersnaps(i-left_cluster+1), cvDegree, percent, DistanceFunction)
     enddo
 
     call mpi_allgatherv(sub_centersnaps, cluster_length, mpi_integer, newCenterSnaps, &
@@ -475,27 +486,28 @@ contains
     deallocate(sub_centersnaps)
   end subroutine
 
-  subroutine calculateSingleClusterCentroids(icluster, coor, nsnap, icentersnap, ndim, percent, dist_function)
-    integer, intent(in) :: icluster,  nsnap, ndim
+  subroutine KmedoidsCalculateSingleClusterCentroids(icluster, coor, cvFrameNumber, &
+      icentersnap, cvDegree, percent, DistanceFunction)
+    integer, intent(in) :: icluster,  cvFrameNumber, cvDegree
     real*8, intent(in) :: percent
-    real*8, intent(in) :: coor(ndim, nsnap)
+    real*8, intent(in) :: coor(cvDegree, cvFrameNumber)
     integer, intent(out) :: icentersnap
-    external :: dist_function
+    external :: DistanceFunction
 
     real*8 :: testscore, score
     integer, allocatable :: testPointsIndex(:)
     integer :: j, swapIndex
     integer :: nTestPoints
 
-    nTestPoints = int(percent*nsnap)
+    nTestPoints = int(percent*cvFrameNumber)
     allocate(testPointsIndex(nTestPoints))
     ! do i = 1, ncluster
-    call generateNeighbors(nTestPoints, icluster, testPointsIndex, coor, nsnap, ndim)
-    call dist_score(coor, nsnap, ndim, icluster, centersnaps(icluster), score, dist_function)
+    call GenerateNeighbors(nTestPoints, icluster, testPointsIndex, coor, cvFrameNumber, cvDegree)
+    call DistanceScore(coor, cvFrameNumber, cvDegree, icluster, centersnaps(icluster), score, DistanceFunction)
     swapIndex = 0
 
     do j = 1, nTestPoints
-      call dist_score(coor, nsnap, ndim, icluster, testPointsIndex(j), testscore, dist_function)
+      call DistanceScore(coor, cvFrameNumber, cvDegree, icluster, testPointsIndex(j), testscore, DistanceFunction)
       if(testScore < score) then
         score = testScore
         swapIndex = j
@@ -509,10 +521,10 @@ contains
     deallocate(testpointsIndex)
   end subroutine
 
-  subroutine generateNeighbors(nPoints, clusterIndex, pointsIndex, coor, nsnap, ndim)
+  subroutine GenerateNeighbors(nPoints, clusterIndex, pointsIndex, coor, cvFrameNumber, cvDegree)
     integer, intent(inout) :: nPoints
-    integer, intent(in) ::  nsnap, ndim, clusterIndex
-    real*8,  intent(in) ::  coor(ndim, nsnap)
+    integer, intent(in) ::  cvFrameNumber, cvDegree, clusterIndex
+    real*8,  intent(in) ::  coor(cvDegree, cvFrameNumber)
     integer, intent(out) :: pointsIndex(nPoints)
 
     integer, allocatable :: subIndex(:)
@@ -520,7 +532,7 @@ contains
     integer :: i, j, count, temp_int
 
     count = 0
-    do i = 1, nsnap
+    do i = 1, cvFrameNumber
       if (maptocluster(i) == clusterindex) then
         count= count+ 1
       endif
@@ -529,7 +541,7 @@ contains
     if (count < nPoints) nPoints = count
 
     j = 1
-    do i = 1, nsnap
+    do i = 1, cvFrameNumber
         if (maptocluster(i) == clusterindex) then
             subIndex(j) = i
             j = j + 1
@@ -549,28 +561,28 @@ contains
 
   end subroutine
 
-  subroutine dist_score(coor, nsnap, ndim, clusterindex, testPointIndex, score, dist_function)
-    real*8, intent(in) :: coor(ndim, nsnap)
-    integer, intent(in) :: nsnap, ndim
+  subroutine DistanceScore(coor, cvFrameNumber, cvDegree, clusterindex, testPointIndex, score, DistanceFunction)
+    real*8, intent(in) :: coor(cvDegree, cvFrameNumber)
+    integer, intent(in) :: cvFrameNumber, cvDegree
     real*8, intent(out) :: score
-    external :: dist_function
+    external :: DistanceFunction
     integer :: i, testPointIndex, clusterindex
     real*8 :: dist2
 
     score = 0d0
-    do i = 1, nsnap
+    do i = 1, cvFrameNumber
       if(maptocluster(i) == clusterindex) then
-        call dist_function(coor(:, i), coor(:, testPointIndex), dist2, ndim)
+        call DistanceFunction(coor(:, i), coor(:, testPointIndex), dist2, cvDegree)
         score = score + dist2
       endif
     enddo
   end subroutine
 
-  subroutine write_coor_cluster_result(traj, ndim, nsnap, clusterIndex, resultDir)
-    real*8, intent(in) :: traj(ndim, nsnap)
-    integer, intent(in) :: ndim, nsnap
+  subroutine ClusterWriteCoordianteResultToNetcdfFile(traj, cvDegree, cvFrameNumber, clusterIndex, resultDir)
+    real*8, intent(in) :: traj(cvDegree, cvFrameNumber)
+    integer, intent(in) :: cvDegree, cvFrameNumber
     integer, intent(in) :: clusterIndex(:)
-    character(max_str_len) :: temp_char, resultDIr
+    character(MaxStringLen) :: temp_char, resultDir
     integer :: w_ncid, w_coorDVID, traj_index_counts
     integer :: i, j
 
@@ -578,16 +590,15 @@ contains
       write(temp_char, "(I6)") clusterIndex(i)
       temp_char = trim(resultDir)//"cluster_"//trim(adjustl(temp_char)) // ".nc"
       write(*, *) "writing cluster ", clusterIndex(i), "into " // trim(temp_char)
-      call create_NCfile(temp_char, w_ncid, w_coorDVID)
+      call NetcdfCreateFile(temp_char, w_ncid, w_coorDVID)
       traj_index_counts = 1
-      do j = 1, nsnap
+      do j = 1, cvFrameNumber
          if(maptocluster(j) == clusterIndex(i)) then
-            call write_NCcoor(w_ncid, w_coorDVID, reshape(traj(:, j), (/3, ndim/3/)), traj_index_counts)
+            call NetcdfWriteCoordinate(w_ncid, w_coorDVID, reshape(traj(:, j), (/3, cvDegree/3/)), traj_index_counts)
             traj_index_counts = traj_index_counts + 1
          endif
       enddo
       call close_NCfile(w_ncid)
    enddo
   end subroutine
-
 end module

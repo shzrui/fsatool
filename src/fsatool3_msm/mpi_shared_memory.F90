@@ -1,11 +1,11 @@
-module mpi_shared_memory
+module MPISharedMemory
     use mpi
     use, intrinsic :: iso_c_binding, only : c_ptr, c_f_pointer
     implicit none
     integer :: shared_num, shared_id
     integer :: shared_comm_world
 contains
-    subroutine init_shared_memory(mpi_world)
+    subroutine InitalizeSharedMemory(mpi_world)
         integer, intent(in) :: mpi_world
         integer :: ierr
         call mpi_comm_split_type(mpi_world, mpi_comm_type_shared, 0, &
@@ -14,7 +14,7 @@ contains
         call mpi_comm_size(shared_comm_world, shared_num, ierr)
     end subroutine
 
-    subroutine allocate_shared_memory_for_2dim_array(dim_shape, shared_array, shared_win)
+    subroutine MPISharedMemoryAllocate2DimDoubleArray(dim_shape, shared_array, shared_win)
         integer, intent(in) :: dim_shape(2)
         integer, intent(out) :: shared_win
         real*8, pointer, intent(out) :: shared_array(:, :)
@@ -37,7 +37,7 @@ contains
         call c_f_pointer(baseptr, shared_array, dim_shape)
     end subroutine
 
-    subroutine allocate_shared_memory_for_1dim_int_array(dim_shape, shared_array, shared_win)
+    subroutine MPISharedMemoryAllocate1DimIntegerArray(dim_shape, shared_array, shared_win)
         integer, intent(in) :: dim_shape
         integer, intent(out) :: shared_win
         integer, pointer, intent(out) :: shared_array(:)
@@ -60,7 +60,7 @@ contains
         call c_f_pointer(baseptr, shared_array, [dim_shape])
     end subroutine
 
-    subroutine deallocate_shared_memory()
+    subroutine MPISharedMemoryDeallocate()
         integer :: ierr
         ! call mpi_win_free(shared_win, ierr)
         call mpi_comm_free(shared_comm_world, ierr)

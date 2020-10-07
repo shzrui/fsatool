@@ -1,5 +1,5 @@
 program main
-  use mod_global
+  use GlobalVariable
   use cluster
   use fileio
   use cluster
@@ -12,23 +12,23 @@ program main
   integer :: ierr
   logical :: msm
 
-  call mod_global_mpiinit()
+  call GlobalVariableMPIInitialize()
   call get_program(msm)
 
   if (msm) then
     call fileio_init_parameters()
-    call mod_global_readtraj()
-    if (ifreadcoor .eqv. .false.) then
+    call GlobalVariableReadTrajs()
+    if (ifReadCoordinate .eqv. .false.) then
         call fileio_readclusterinfo()
     else
-        call cluster_analysis()
+        call ClusterAnalysis()
         call fileio_writeclusterinfo()
     endif
     if(.not. ifOnlyRunClustering) then
-      call markov_analysis()
+      call MarkovAnalysis()
       call fileio_writestateinfo()
     endif
-    call tpt_msm_analysis()
+    call TPTAnalysis()
   endif
   call mpi_finalize(ierr)
 end program

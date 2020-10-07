@@ -1,7 +1,7 @@
 module getcmd
-    use mod_global, only: inputfile, resultdir, max_str_len
+    use GlobalVariable, only: inputFile, resultDir, MaxStringLen
     implicit none
-    character(max_str_len) :: argname, resultfile
+    character(MaxStringLen) :: argname, resultFile
     integer, save :: iarg = 0
     public :: get_program
 contains
@@ -45,11 +45,11 @@ contains
             if (trim(argname) == "-i") then
                 iarg = iarg + 1
                 call get_command_argument(iarg, argname)
-                inputfile = argname
+                inputFile = argname
             elseif  (trim(argname) == "-o") then
                 iarg = iarg + 1
                 call get_command_argument(iarg, argname)
-                resultfile = argname
+                resultFile = argname
             else
                 continue
             endif
@@ -57,81 +57,81 @@ contains
     end subroutine
 
     subroutine run_cluster()
-        use cluster, only: mod_cluster
-        inputfile = "cluster.in"
-        resultfile = "cluster.out"
+        use cluster, only: ModCluster
+        inputFile = "cluster.in"
+        resultFile = "cluster.out"
         call get_nextcmd()
         call check_file_exist()
-        call mod_cluster(inputfile, resultfile)
+        call ModCluster(inputFile, resultFile)
     end subroutine
 
     subroutine run_lumping()
-        use coarse_grain, only: mod_lumping
-        inputfile = "lumping.in"
-        resultfile = "lumping.out"
+        use CoarseGrain, only: ModCoarseGrain
+        inputFile = "lumping.in"
+        resultFile = "lumping.out"
         call get_nextcmd()
-        call mod_lumping(inputfile, resultfile)
+        call ModCoarseGrain(inputFile, resultFile)
     end subroutine
 
     subroutine run_tpt()
-        use tpt, only: mod_tpt
-        inputfile = "tpt.in"
-        resultfile = "tpt.out"
+        use tpt, only: ModTPT
+        inputFile = "tpt.in"
+        resultFile = "tpt.out"
         call get_nextcmd()
         call check_file_exist()
-        call mod_tpt(inputfile, resultfile)
+        call ModTPT(inputFile, resultFile)
     end subroutine
 
     subroutine run_check()
-        use markov, only: markov_check
-        inputfile = "check.in"
-        resultfile = "check.out"
+        use markov, only: MarkovCheck
+        inputFile = "check.in"
+        resultFile = "check.out"
         call get_nextcmd()
         call check_file_exist()
-        call markov_check(inputfile, resultfile)
+        call MarkovCheck(inputFile, resultFile)
     end subroutine
 
     subroutine run_tram()
         use tram, only: mod_tram
-        inputfile = "tram.in"
-        resultfile = "tram.out"
+        inputFile = "tram.in"
+        resultFile = "tram.out"
         call get_nextcmd()
         call check_file_exist()
-        call mod_tram(inputfile, resultfile)
+        call mod_tram(inputFile, resultFile)
     end subroutine
 
     subroutine run_transform()
         use transform, only: mod_transform
-        inputfile = "transform.in"
-        resultfile = "transform.out"
+        inputFile = "transform.in"
+        resultFile = "transform.out"
         call get_nextcmd()
         call check_file_exist()
-        call mod_transform(inputfile, resultfile)
+        call mod_transform(inputFile, resultFile)
     end subroutine
 
     subroutine run_writeTraj()
         use fileio, only: mod_writeTraj
-        inputfile = "writeTraj.in"
-        resultdir = "info/"
-        resultfile = ""
+        inputFile = "writeTraj.in"
+        resultDir = "info/"
+        resultFile = ""
         call get_nextcmd()
         call check_file_exist()
-        call mod_writeTraj(inputfile, resultDir)
+        call mod_writeTraj(inputFile, resultDir)
     end subroutine
 
     subroutine run_msm()
-        inputfile = "msm.in"
-        resultdir = "info/"
-        resultfile = ""
+        inputFile = "msm.in"
+        resultDir = "info/"
+        resultFile = ""
         call get_nextcmd()
         call check_file_exist()
-        if (resultfile /= "") resultdir = resultfile
+        if (resultFile /= "") resultDir = resultFile
     end subroutine
 
 
     subroutine check_file_exist()
         logical :: file_exist
-        inquire(file=inputfile, exist=file_exist)
+        inquire(file=inputFile, exist=file_exist)
         if( .not. file_exist) stop "input file not exist"
     end subroutine
 

@@ -79,7 +79,7 @@ contains
     enddo
   end function
 
-subroutine getfreeunit(tpunit)
+subroutine GetFreeUnit(tpunit)
   implicit none
   integer tpunit
   logical ifused
@@ -88,10 +88,10 @@ subroutine getfreeunit(tpunit)
   do
      if ( ifused .eqv. .false. ) exit
      tpunit = tpunit + 1
-     if (tpunit > 99) call errormsg ("unit has been used")
+     if (tpunit > 99) call ErrorMessage ("unit has been used")
      inquire (unit=tpunit,opened=ifused)
   end do
-end subroutine getfreeunit
+end subroutine GetFreeUnit
 
 SUBROUTINE init_random_seed()
   INTEGER :: i, n, clock
@@ -104,14 +104,14 @@ SUBROUTINE init_random_seed()
   DEALLOCATE(seed)
 END SUBROUTINE init_random_seed
 
-subroutine errormsg(msg)
+subroutine ErrorMessage(msg)
   character(len=*),intent(in) :: msg
   write(*, "(a)")"Error: "//msg
   flush(6)
   stop
-end subroutine errormsg
+end subroutine ErrorMessage
 
-subroutine loginfo(msg)
+subroutine LogInfo(msg)
   character(len=*), intent(in),optional :: msg
   integer :: lenstr
   if (present(msg)) then
@@ -122,5 +122,5 @@ subroutine loginfo(msg)
      write(*, "(a)") repeat("*", 80)
      write(*, *)
   endif
-end subroutine loginfo
+end subroutine LogInfo
 end module
