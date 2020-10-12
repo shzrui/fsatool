@@ -58,9 +58,11 @@ Output File Format
 -------------------
 
 - *siminfo.txt* 
+
 The log file of Mixing-REMD sampling
 
 - *procinfo/procinfo_0.txt*
+
 The process info file for each processor
 
 ====   =============  ===========  ===================
@@ -76,12 +78,15 @@ time   process index   potential   collective variable
 ====   =============  ===========  ===================
 
 - *procinfo/traj_0.mdcrd*
+
 The trajectory file for each processor
 
 - *procinfo/surfacedata_0.txt*
+
 The collective variable surface of each processor
 
 - *procinfo/kelvin_exchangerate.txt*
+
 The exchange rate between each replica
 
 =====   =====================    ==================   ==================   =========

@@ -1,8 +1,7 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -12,12 +11,19 @@
   
 
   
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
+
+  
   
   
   
 
   
-  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
@@ -29,11 +35,6 @@
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
     
-
-  
-  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="MSM module" href="../MSMmodule/index.html" />
@@ -51,7 +52,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> FSATOOL
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> FSATOOL
           
 
           
@@ -81,6 +82,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -116,12 +118,16 @@
 <li class="toctree-l1"><a class="reference internal" href="../Visualization.html">Visualization</a></li>
 </ul>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../Tutorial/index.html">Tutorial</a></li>
+</ul>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="../Reference.html">Reference</a></li>
 </ul>
 
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -160,7 +166,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="../index.html">Docs</a> &raquo;</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
           <li><a href="index.html">Sampling module</a> &raquo;</li>
         
@@ -221,42 +227,42 @@
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
 <blockquote>
 <div><p>The input file of the SMD shows below, the <cite>task</cite> namelist should set ifsmd to true. And input file contains two kinds of collective variables: one is followed the same rule as AMBER, the other CV names csacolvar is used to constrain the atom in a plane or in a line.</p>
-<dl class="simple">
-<dt>&amp;task</dt><dd><p>ifsmd = .true.</p>
-</dd>
-</dl>
-<p>/</p>
-<dl class="simple">
-<dt>&amp;smd</dt><dd><p>smdleadcv = 3, smdrelaxstep = 0, reversefrag = 0, smdspeed = 1.0 (A/ns)
-smdinitcv = 0, 0, 17.5, smdendcv = 0, 0, 40.5
-smdk = 50.0, 50.0, 50.0
-smdpathfrag = 200
-smdnpath = 1
-smdweigthfreq = 1000</p>
-</dd>
-</dl>
-<p>/</p>
-<dl>
-<dt>&amp;colvar</dt><dd><p>cv_type = ‘N_OF_BONDS’
-cv_min=0.0, cv_max=64.0
-cv_ni= 128, cv_nr=  1
-cv_i =  19, 330,   3, 339,  19, 346,   4, 379,  15, 416,  16, 431,  13, 501,   8, 611,  31, 299,  23, 330,  23, 334,  23, 346,  41, 605,  41, 618,  57, 289,  57, 293,  43, 330,  43, 334,  49, 358,  50, 417,  54, 479,  51, 501,  47, 579,  45, 601,  51, 605,  45, 618,  65, 271,  61, 289,  61, 301,  76, 576,  59, 601,  74, 616,  73, 620,  74, 671,  73, 687,  66, 744,  96, 249,  96, 269,  78, 289,  78, 293,  88, 318,  90, 353,  92, 485,  80, 572,  80, 580, 100, 269, 102, 553,  98, 572,  98, 576, 108, 590, 112, 746, 125, 553, 117, 572, 149, 570, 158, 403, 158, 464, 162, 485, 163, 564, 204, 406, 204, 484, 271, 809, 297, 624, 304, 694, 598, 746,
-cv_r = 4.0
-/</p>
-<p>&amp;colvar
-cv_type = ‘R_OF_GYRATION’
-cv_min = 4, cv_max = 10
-cv_ni=  51, cv_nr=  0
-cv_i =    5,   22,   44,   60,   79,   99,  118,  140,  152,  168,  190,  197,  219,  226,  248,  270,  277,  292,  311,  333,  347,  363,  373,  385,  392,  413,  423,  437,  451,  471,  490,  510,  532,  549,  556,  575,  585,  604,  619,  629,  651,  657,  667,  681,  700,  722,  732,  751,  766,  776,  793,
-/</p>
-<p>&amp;csacolvar
-cv_type = ‘COM_DIS’
-cv_i = 5, 12,31,0,46,62,79,
-cv_r = 1.0, -1.0, -1.0
-/</p>
-</dd>
-</dl>
 </div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">task</span>
+    <span class="n">ifsmd</span> <span class="o">=</span> <span class="o">.</span><span class="n">true</span><span class="o">.</span>
+<span class="o">/</span>
+
+<span class="o">&amp;</span><span class="n">smd</span>
+    <span class="n">smdleadcv</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span> <span class="n">smdrelaxstep</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">reversefrag</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">smdspeed</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="p">(</span><span class="n">A</span><span class="o">/</span><span class="n">ns</span><span class="p">)</span>
+    <span class="n">smdinitcv</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">17.5</span><span class="p">,</span> <span class="n">smdendcv</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">40.5</span>
+    <span class="n">smdk</span> <span class="o">=</span> <span class="mf">50.0</span><span class="p">,</span> <span class="mf">50.0</span><span class="p">,</span> <span class="mf">50.0</span>
+    <span class="n">smdpathfrag</span> <span class="o">=</span> <span class="mi">200</span>
+    <span class="n">smdnpath</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">smdweigthfreq</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="o">/</span>
+
+<span class="o">&amp;</span><span class="n">colvar</span>
+    <span class="n">cv_type</span> <span class="o">=</span> <span class="s1">&#39;N_OF_BONDS&#39;</span>
+    <span class="n">cv_min</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">cv_max</span><span class="o">=</span><span class="mf">64.0</span>
+    <span class="n">cv_ni</span><span class="o">=</span> <span class="mi">128</span><span class="p">,</span> <span class="n">cv_nr</span><span class="o">=</span>  <span class="mi">1</span>
+    <span class="n">cv_i</span> <span class="o">=</span>  <span class="mi">19</span><span class="p">,</span> <span class="mi">330</span><span class="p">,</span>   <span class="mi">3</span><span class="p">,</span> <span class="mi">339</span><span class="p">,</span>  <span class="mi">19</span><span class="p">,</span> <span class="mi">346</span><span class="p">,</span>   <span class="mi">4</span><span class="p">,</span> <span class="mi">379</span><span class="p">,</span>  <span class="mi">15</span><span class="p">,</span> <span class="mi">416</span><span class="p">,</span>  <span class="mi">16</span><span class="p">,</span> <span class="mi">431</span><span class="p">,</span>  <span class="mi">13</span><span class="p">,</span> <span class="mi">501</span><span class="p">,</span>   <span class="mi">8</span><span class="p">,</span> <span class="mi">611</span><span class="p">,</span>  <span class="mi">31</span><span class="p">,</span> <span class="mi">299</span><span class="p">,</span>  <span class="mi">23</span><span class="p">,</span> <span class="mi">330</span><span class="p">,</span>  <span class="mi">23</span><span class="p">,</span> <span class="mi">334</span><span class="p">,</span>  <span class="mi">23</span><span class="p">,</span> <span class="mi">346</span><span class="p">,</span>  <span class="mi">41</span><span class="p">,</span> <span class="mi">605</span><span class="p">,</span>  <span class="mi">41</span><span class="p">,</span> <span class="mi">618</span><span class="p">,</span>  <span class="mi">57</span><span class="p">,</span> <span class="mi">289</span><span class="p">,</span>  <span class="mi">57</span><span class="p">,</span> <span class="mi">293</span><span class="p">,</span>  <span class="mi">43</span><span class="p">,</span> <span class="mi">330</span><span class="p">,</span>  <span class="mi">43</span><span class="p">,</span> <span class="mi">334</span><span class="p">,</span>  <span class="mi">49</span><span class="p">,</span> <span class="mi">358</span><span class="p">,</span>  <span class="mi">50</span><span class="p">,</span> <span class="mi">417</span><span class="p">,</span>  <span class="mi">54</span><span class="p">,</span> <span class="mi">479</span><span class="p">,</span>  <span class="mi">51</span><span class="p">,</span> <span class="mi">501</span><span class="p">,</span>  <span class="mi">47</span><span class="p">,</span> <span class="mi">579</span><span class="p">,</span>  <span class="mi">45</span><span class="p">,</span> <span class="mi">601</span><span class="p">,</span>  <span class="mi">51</span><span class="p">,</span> <span class="mi">605</span><span class="p">,</span>  <span class="mi">45</span><span class="p">,</span> <span class="mi">618</span><span class="p">,</span>  <span class="mi">65</span><span class="p">,</span> <span class="mi">271</span><span class="p">,</span>  <span class="mi">61</span><span class="p">,</span> <span class="mi">289</span><span class="p">,</span>  <span class="mi">61</span><span class="p">,</span> <span class="mi">301</span><span class="p">,</span>  <span class="mi">76</span><span class="p">,</span> <span class="mi">576</span><span class="p">,</span>  <span class="mi">59</span><span class="p">,</span> <span class="mi">601</span><span class="p">,</span>  <span class="mi">74</span><span class="p">,</span> <span class="mi">616</span><span class="p">,</span>  <span class="mi">73</span><span class="p">,</span> <span class="mi">620</span><span class="p">,</span>  <span class="mi">74</span><span class="p">,</span> <span class="mi">671</span><span class="p">,</span>  <span class="mi">73</span><span class="p">,</span> <span class="mi">687</span><span class="p">,</span>  <span class="mi">66</span><span class="p">,</span> <span class="mi">744</span><span class="p">,</span>  <span class="mi">96</span><span class="p">,</span> <span class="mi">249</span><span class="p">,</span>  <span class="mi">96</span><span class="p">,</span> <span class="mi">269</span><span class="p">,</span>  <span class="mi">78</span><span class="p">,</span> <span class="mi">289</span><span class="p">,</span>  <span class="mi">78</span><span class="p">,</span> <span class="mi">293</span><span class="p">,</span>  <span class="mi">88</span><span class="p">,</span> <span class="mi">318</span><span class="p">,</span>  <span class="mi">90</span><span class="p">,</span> <span class="mi">353</span><span class="p">,</span>  <span class="mi">92</span><span class="p">,</span> <span class="mi">485</span><span class="p">,</span>  <span class="mi">80</span><span class="p">,</span> <span class="mi">572</span><span class="p">,</span>  <span class="mi">80</span><span class="p">,</span> <span class="mi">580</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">269</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">553</span><span class="p">,</span>  <span class="mi">98</span><span class="p">,</span> <span class="mi">572</span><span class="p">,</span>  <span class="mi">98</span><span class="p">,</span> <span class="mi">576</span><span class="p">,</span> <span class="mi">108</span><span class="p">,</span> <span class="mi">590</span><span class="p">,</span> <span class="mi">112</span><span class="p">,</span> <span class="mi">746</span><span class="p">,</span> <span class="mi">125</span><span class="p">,</span> <span class="mi">553</span><span class="p">,</span> <span class="mi">117</span><span class="p">,</span> <span class="mi">572</span><span class="p">,</span> <span class="mi">149</span><span class="p">,</span> <span class="mi">570</span><span class="p">,</span> <span class="mi">158</span><span class="p">,</span> <span class="mi">403</span><span class="p">,</span> <span class="mi">158</span><span class="p">,</span> <span class="mi">464</span><span class="p">,</span> <span class="mi">162</span><span class="p">,</span> <span class="mi">485</span><span class="p">,</span> <span class="mi">163</span><span class="p">,</span> <span class="mi">564</span><span class="p">,</span> <span class="mi">204</span><span class="p">,</span> <span class="mi">406</span><span class="p">,</span> <span class="mi">204</span><span class="p">,</span> <span class="mi">484</span><span class="p">,</span> <span class="mi">271</span><span class="p">,</span> <span class="mi">809</span><span class="p">,</span> <span class="mi">297</span><span class="p">,</span> <span class="mi">624</span><span class="p">,</span> <span class="mi">304</span><span class="p">,</span> <span class="mi">694</span><span class="p">,</span> <span class="mi">598</span><span class="p">,</span> <span class="mi">746</span><span class="p">,</span>
+    <span class="n">cv_r</span> <span class="o">=</span> <span class="mf">4.0</span>
+<span class="o">/</span>
+
+    <span class="o">&amp;</span><span class="n">colvar</span>
+    <span class="n">cv_type</span> <span class="o">=</span> <span class="s1">&#39;R_OF_GYRATION&#39;</span>
+    <span class="n">cv_min</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span> <span class="n">cv_max</span> <span class="o">=</span> <span class="mi">10</span>
+    <span class="n">cv_ni</span><span class="o">=</span>  <span class="mi">51</span><span class="p">,</span> <span class="n">cv_nr</span><span class="o">=</span>  <span class="mi">0</span>
+    <span class="n">cv_i</span> <span class="o">=</span>    <span class="mi">5</span><span class="p">,</span>   <span class="mi">22</span><span class="p">,</span>   <span class="mi">44</span><span class="p">,</span>   <span class="mi">60</span><span class="p">,</span>   <span class="mi">79</span><span class="p">,</span>   <span class="mi">99</span><span class="p">,</span>  <span class="mi">118</span><span class="p">,</span>  <span class="mi">140</span><span class="p">,</span>  <span class="mi">152</span><span class="p">,</span>  <span class="mi">168</span><span class="p">,</span>  <span class="mi">190</span><span class="p">,</span>  <span class="mi">197</span><span class="p">,</span>  <span class="mi">219</span><span class="p">,</span>  <span class="mi">226</span><span class="p">,</span>  <span class="mi">248</span><span class="p">,</span>  <span class="mi">270</span><span class="p">,</span>  <span class="mi">277</span><span class="p">,</span>  <span class="mi">292</span><span class="p">,</span>  <span class="mi">311</span><span class="p">,</span>  <span class="mi">333</span><span class="p">,</span>  <span class="mi">347</span><span class="p">,</span>  <span class="mi">363</span><span class="p">,</span>  <span class="mi">373</span><span class="p">,</span>  <span class="mi">385</span><span class="p">,</span>  <span class="mi">392</span><span class="p">,</span>  <span class="mi">413</span><span class="p">,</span>  <span class="mi">423</span><span class="p">,</span>  <span class="mi">437</span><span class="p">,</span>  <span class="mi">451</span><span class="p">,</span>  <span class="mi">471</span><span class="p">,</span>  <span class="mi">490</span><span class="p">,</span>  <span class="mi">510</span><span class="p">,</span>  <span class="mi">532</span><span class="p">,</span>  <span class="mi">549</span><span class="p">,</span>  <span class="mi">556</span><span class="p">,</span>  <span class="mi">575</span><span class="p">,</span>  <span class="mi">585</span><span class="p">,</span>  <span class="mi">604</span><span class="p">,</span>  <span class="mi">619</span><span class="p">,</span>  <span class="mi">629</span><span class="p">,</span>  <span class="mi">651</span><span class="p">,</span>  <span class="mi">657</span><span class="p">,</span>  <span class="mi">667</span><span class="p">,</span>  <span class="mi">681</span><span class="p">,</span>  <span class="mi">700</span><span class="p">,</span>  <span class="mi">722</span><span class="p">,</span>  <span class="mi">732</span><span class="p">,</span>  <span class="mi">751</span><span class="p">,</span>  <span class="mi">766</span><span class="p">,</span>  <span class="mi">776</span><span class="p">,</span>  <span class="mi">793</span><span class="p">,</span>
+<span class="o">/</span>
+
+    <span class="o">&amp;</span><span class="n">csacolvar</span>
+    <span class="n">cv_type</span> <span class="o">=</span> <span class="s1">&#39;COM_DIS&#39;</span>
+    <span class="n">cv_i</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span><span class="mi">31</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">46</span><span class="p">,</span><span class="mi">62</span><span class="p">,</span><span class="mi">79</span><span class="p">,</span>
+    <span class="n">cv_r</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span>
+<span class="o">/</span>
+</pre></div>
+</div>
 </div>
 <div class="section" id="output-file-format">
 <h2>Output File Format<a class="headerlink" href="#output-file-format" title="Permalink to this headline">¶</a></h2>
@@ -356,11 +362,19 @@ cv_r = 1.0, -1.0, -1.0
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2019, FSATOOL Group
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -371,7 +385,6 @@ cv_r = 1.0, -1.0, -1.0
 
   </div>
   
-
 
   <script type="text/javascript">
       jQuery(function () {

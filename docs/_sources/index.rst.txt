@@ -41,6 +41,12 @@ Visualization
 .. toctree::
     Visualization
 
+TuTorial
+==================
+
+.. toctree::
+    Tutorial/index
+
 Reference
 ===================
 

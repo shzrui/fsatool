@@ -16,7 +16,7 @@ EDS namelist
 :pcend: **integer** The end index of principal component to run EDS in the first CV space
 :eigenfile: **array of character** The data of eigenvalue, eigenvector of the pre-simulation in the first CV.
 :edsatoms: **array of integer** The needed atom index of running EDS in the first CV
-:edsmdstep: **integer** The number of MD step between EDS of first CV space and ENS of second CV space
+:edsmdstep: **integer** The number of MD step between EDS of first CV space and EDS of second CV space
 :edsfixstep: **integer** The number of step of running EDS in the first CV space
 :edsfixstep2: **integer** The number of step of running EDS in the second CV space
 :edsdis02: **dobule precision**  The threshold of the distance between coordinates in the second CV eigenvector space and reference coordinates in the second CV eigenvector space. When the distance less than this threshold, then this round of EDS  is finished.
@@ -72,10 +72,12 @@ Output File Format
 ----------------------
 
 - *eds_path_1.traj*
+
 The Cartesian coordinate of atoms in EDS sampling, the number of trajectory file is determined by the 
 total steps and the number of steps in a round of EDS
 
 - *procinfo_0.txt*
+
 The information file of  EDS sampling
 
 ====  ===============  ========= ======  ======== ========  =========
