@@ -1,7 +1,0 @@
-Tutorial
-=======================
-
-.. toctree::
-    :maxdepth: 2
-
-    Mixing_REMD_tutorial
