@@ -4,7 +4,7 @@ Extract trajectory module
 The output data of Mixing-REMD sampling is collected from each processor. When the exchange happens, the temperature
 at each processor is swapped. If one want to analyze the trajectory in each temperature, then the trajectory file and information file of Mixing-REMD should be extracted and distribute among each temperature.
 
-The extract module need a input file named "extracted.in" which has a "trajs" namelist
+The extract module need a input file named "extract.in" which has a "trajs" namelist
 
 
 `trajs` namelist
