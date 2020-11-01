@@ -1,0 +1,605 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Simulate a Small Peptide and analyze the datas by FSATOOL &mdash; FSATOOL 1.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Free energy calculation from SMD" href="SMD_tutorial.html" />
+    <link rel="prev" title="Mixing REMD with FSATOOL" href="Mixing_REMD_ALA_tutorial.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> FSATOOL
+          
+
+          
+            
+            <img src="../_static/fsatool_logo.jpg" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../Installation.html">Installation</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../SamplingModule/index.html">Sampling module</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../MSMmodule/index.html">MSM module</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../Extractmodule.html">Extract trajectory module</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../Visualization.html">Visualization</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Tutorial</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="Mixing_REMD_ALA_tutorial.html">Mixing REMD with FSATOOL</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Simulate a Small Peptide and analyze the datas by FSATOOL</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#introduction">Introduction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#prepare-the-initial-files-for-simulation">Prepare the initial files for simulation</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#initial-files">initial files</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#native-structure">Native structure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#initial-structure">Initial structure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#files-for-mixing-remd">Files for Mixing REMD</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#mixing-remd-for-trpzip2">Mixing REMD for Trpzip2</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#collective-variables">Collective variables</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#markov-state-model-analysis">Markov State Model Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#visualization">Visualization</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#extract-representative-structure">Extract representative structure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#plot-flux-network">Plot flux network</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="SMD_tutorial.html">Free energy calculation from SMD</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../Reference.html">Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">FSATOOL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="index.html">Tutorial</a> &raquo;</li>
+        
+      <li>Simulate a Small Peptide and analyze the datas by FSATOOL</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/Tutorial/Mixing_REMD_TRPCAGE_tutorial.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="simulate-a-small-peptide-and-analyze-the-datas-by-fsatool">
+<h1>Simulate a Small Peptide and analyze the datas by FSATOOL<a class="headerlink" href="#simulate-a-small-peptide-and-analyze-the-datas-by-fsatool" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>The small peptide in our tutorial is trpzip2(PDB ID: <a class="reference external" href="https://www.rcsb.org/structure/1LE1">1le1</a>). The sequence of this peptide is <strong>SWTWENGKWTWKX</strong>.
+Because of its small size and intuitive 3D interaction network, trpzip2 is a good model for hairpin folding studies.
+There are many other works presented the multifolding pathways of trpzip2. In this tutorial, we will perform a simlation
+on trpzip2 by using Mixing REMD and extract the dominant transition pathways from the folding network by
+Markov state model(MSM).</p>
+<div class="figure align-right" id="id1">
+<span id="trpzip2-image"></span><a class="reference external image-reference" href="C:\Users\zhz\Pictures\sphinx\trpzip2.png"><img alt="../_images/trpzip2.png" src="../_images/trpzip2.png" style="width: 163.20000000000002px; height: 190.4px;" /></a>
+<p class="caption"><span class="caption-text">The cartoon of trpzip2.</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
+</div>
+</div>
+<div class="section" id="prepare-the-initial-files-for-simulation">
+<h2>Prepare the initial files for simulation<a class="headerlink" href="#prepare-the-initial-files-for-simulation" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="initial-files">
+<h3>initial files<a class="headerlink" href="#initial-files" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>Prmtop and coordinates files for native structure of trpzip2.</p></li>
+<li><p>Protop and coordinates files for initial structure of trpzip2.</p></li>
+</ul>
+</div>
+<div class="section" id="native-structure">
+<h3>Native structure<a class="headerlink" href="#native-structure" title="Permalink to this headline">¶</a></h3>
+<p>The native structure of trpzip2 could obtain by searching in <a class="reference external" href="https://www.rcsb.org/">Protein Data Bank</a>. The ID number of native structure is 1le1.
+You can download the pdb file by clicking <a class="reference download internal" download="" href="../_downloads/4b08afc016976582dca3455c2e542b1b/1le1.pdb"><code class="xref download docutils literal notranslate"><span class="pre">here</span></code></a>. This file contains
+20 snapshots of NMR structure of trpzip2, but we only need one of them. You can get the first snapshot of this pdb by typing:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">cpptraj</span>
+<span class="o">&gt;</span> <span class="n">parm</span> <span class="mi">1</span><span class="n">le1</span><span class="o">.</span><span class="n">pdb</span>
+<span class="o">&gt;</span> <span class="n">trajin</span> <span class="mi">1</span><span class="n">le1</span><span class="o">.</span><span class="n">pdb</span>
+<span class="o">&gt;</span> <span class="n">trajout</span> <span class="mi">1</span><span class="n">le1_1</span><span class="o">.</span><span class="n">pdb</span> <span class="n">onlyframes</span> <span class="mi">1</span>
+<span class="o">&gt;</span> <span class="n">go</span>
+<span class="o">&gt;</span> <span class="n">quit</span>
+</pre></div>
+</div>
+<p>Then you can get a pdb file named <a class="reference download internal" download="" href="../_downloads/385080a65c594dc45ab6b256ef3dbafa/1le1_1.pdb"><code class="xref download docutils literal notranslate"><span class="pre">&quot;1le1_1.pdb&quot;</span></code></a>. For the
+purposes of this tutorial and for the sake of simplicity we will avoid treating the trpzip2 molecule in the calculation
+since this would require the setup of new parameters for this peptide and is beyond the scope of this tutorial. Thus we will
+simply remove the last residue “Xaa” by erasing it from the pdb file. Hence you should remove atoms 219 to 222 from
+the “1le1_1.pdb” file. You can get the final pdb file by click <a class="reference download internal" download="" href="../_downloads/2ed24b72710be2757d9e4321505948d6/1le1_2.pdb"><code class="xref download docutils literal notranslate"><span class="pre">&quot;1le1_2.pdb&quot;</span></code></a>.</p>
+</div>
+<div class="section" id="initial-structure">
+<h3>Initial structure<a class="headerlink" href="#initial-structure" title="Permalink to this headline">¶</a></h3>
+<p>The LeAP program collates parameters in order to make a complete description of a molecule. We can use LeAP to model a initial
+structure of trpzip2. You can get the tutorial of LeAP by visiting <a class="reference external" href="https://ambermd.org/tutorials/basic/tutorial10/index.php">https://ambermd.org/tutorials/basic/tutorial10/index.php</a>. Here, we
+should only run a scripy(<a class="reference download internal" download="" href="../_downloads/f170196e77518c5c25f08df65f2d1ce0/leap.in"><code class="xref download docutils literal notranslate"><span class="pre">&quot;leap.in&quot;</span></code></a>) and you can get the
+prmtop and inpcrd file of the initial structure of trpzip2. You can also get the prmtop file <a class="reference download internal" download="" href="../_downloads/73bfc0ae3611aed6921b86c41a919e8f/trpzip2.prmtop"><code class="xref download docutils literal notranslate"><span class="pre">&quot;trpzip2.prmtop&quot;</span></code></a>
+and inpcrd file <a class="reference download internal" download="" href="../_downloads/00ead373a5096377b6fc609c162911b7/trpzip2.crd"><code class="xref download docutils literal notranslate"><span class="pre">&quot;trpzip2.crd&quot;</span></code></a> by download here.</p>
+<p>Then we should run minimization for initial structure of trpzip2. We should create a minimization input file(It is named “min.in” here):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">cntrl</span>
+  <span class="n">imin</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+  <span class="n">maxcyc</span> <span class="o">=</span> <span class="mi">2000</span><span class="p">,</span>
+  <span class="n">ncyc</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span>
+  <span class="n">ntb</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+  <span class="n">igb</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
+  <span class="n">drms</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span>
+  <span class="n">cut</span> <span class="o">=</span> <span class="mf">999.0</span>
+<span class="o">/</span>
+</pre></div>
+</div>
+<p>Then start minimization by sander:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">sander</span> <span class="o">-</span><span class="n">O</span> <span class="o">-</span><span class="n">i</span> <span class="nb">min</span><span class="o">.</span><span class="ow">in</span> <span class="o">-</span><span class="n">p</span> <span class="n">trpzip2</span><span class="o">.</span><span class="n">prmtop</span> <span class="o">-</span><span class="n">c</span> <span class="n">trpzip2</span><span class="o">.</span><span class="n">crd</span> <span class="o">-</span><span class="n">o</span> <span class="nb">min</span><span class="o">.</span><span class="n">out</span> <span class="o">-</span><span class="n">r</span> <span class="n">trpzip2</span><span class="o">.</span><span class="n">rst</span>
+</pre></div>
+</div>
+<p>It will take several minutes to run minimization. Then you will get the restart file named <a class="reference download internal" download="" href="../_downloads/ef808932978e1e31cef722951684cce6/trpzip2.rst"><code class="xref download docutils literal notranslate"><span class="pre">&quot;trpzip2.rst&quot;</span></code></a>.
+It contains the coordinates information of trpzip2 for formal simulation.</p>
+</div>
+<div class="section" id="files-for-mixing-remd">
+<h3>Files for Mixing REMD<a class="headerlink" href="#files-for-mixing-remd" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>The PDB file of native structure <a class="reference download internal" download="" href="../_downloads/2ed24b72710be2757d9e4321505948d6/1le1_2.pdb"><code class="xref download docutils literal notranslate"><span class="pre">&quot;1le1_2.pdb&quot;</span></code></a>.</p></li>
+<li><p>The prmtop file of initial structure <a class="reference download internal" download="" href="../_downloads/73bfc0ae3611aed6921b86c41a919e8f/trpzip2.prmtop"><code class="xref download docutils literal notranslate"><span class="pre">&quot;trpzip2.prmtop&quot;</span></code></a>.</p></li>
+<li><p>The coordinates file of trpzip2 of initial structure <a class="reference download internal" download="" href="../_downloads/ef808932978e1e31cef722951684cce6/trpzip2.rst"><code class="xref download docutils literal notranslate"><span class="pre">&quot;trpzip2.rst&quot;</span></code></a>.</p></li>
+</ul>
+</div>
+</div>
+<div class="section" id="mixing-remd-for-trpzip2">
+<h2>Mixing REMD for Trpzip2<a class="headerlink" href="#mixing-remd-for-trpzip2" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="collective-variables">
+<h3>Collective variables<a class="headerlink" href="#collective-variables" title="Permalink to this headline">¶</a></h3>
+<p>Here we choose the root-mean-square deviation(RMSD) and radius of gyration of the Cα atomic coordinates as the
+Collective variables(CVs). The CVs are defined in the <code class="docutils literal notranslate"><span class="pre">colvar</span></code> namelist in AMBER. The CV of RMSD is defined as follow:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">colvar</span>
+  <span class="n">cv_type</span> <span class="o">=</span> <span class="s1">&#39;MULTI_RMSD&#39;</span>
+  <span class="n">cv_min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">cv_max</span> <span class="o">=</span> <span class="mi">30</span>
+  <span class="n">cv_ni</span><span class="o">=</span>  <span class="mi">13</span><span class="p">,</span> <span class="n">cv_nr</span><span class="o">=</span>  <span class="mi">36</span>
+  <span class="n">cv_i</span> <span class="o">=</span>    <span class="mi">5</span><span class="p">,</span>   <span class="mi">16</span><span class="p">,</span>   <span class="mi">40</span><span class="p">,</span>   <span class="mi">54</span><span class="p">,</span>   <span class="mi">78</span><span class="p">,</span>   <span class="mi">93</span><span class="p">,</span>  <span class="mi">107</span><span class="p">,</span>  <span class="mi">114</span><span class="p">,</span>  <span class="mi">136</span><span class="p">,</span>  <span class="mi">160</span><span class="p">,</span>  <span class="mi">174</span><span class="p">,</span>  <span class="mi">198</span><span class="p">,</span>   <span class="mi">0</span><span class="p">,</span>
+  <span class="n">cv_r</span> <span class="o">=</span>
+    <span class="o">-</span><span class="mf">3.187</span><span class="p">,</span>      <span class="mf">8.462</span><span class="p">,</span>      <span class="mf">1.023</span><span class="p">,</span>     <span class="o">-</span><span class="mf">2.225</span><span class="p">,</span>      <span class="mf">4.801</span><span class="p">,</span>      <span class="mf">1.762</span><span class="p">,</span>
+    <span class="o">-</span><span class="mf">4.293</span><span class="p">,</span>      <span class="mf">1.763</span><span class="p">,</span>      <span class="mf">0.555</span><span class="p">,</span>     <span class="o">-</span><span class="mf">4.047</span><span class="p">,</span>     <span class="o">-</span><span class="mf">2.043</span><span class="p">,</span>      <span class="mf">1.131</span><span class="p">,</span>
+    <span class="o">-</span><span class="mf">3.607</span><span class="p">,</span>     <span class="o">-</span><span class="mf">4.303</span><span class="p">,</span>     <span class="o">-</span><span class="mf">1.973</span><span class="p">,</span>     <span class="o">-</span><span class="mf">2.409</span><span class="p">,</span>     <span class="o">-</span><span class="mf">7.943</span><span class="p">,</span>     <span class="o">-</span><span class="mf">2.572</span><span class="p">,</span>
+    <span class="o">-</span><span class="mf">1.114</span><span class="p">,</span>     <span class="o">-</span><span class="mf">8.275</span><span class="p">,</span>      <span class="mf">1.067</span><span class="p">,</span>      <span class="mf">0.937</span><span class="p">,</span>     <span class="o">-</span><span class="mf">4.966</span><span class="p">,</span>      <span class="mf">1.028</span><span class="p">,</span>
+     <span class="mf">0.524</span><span class="p">,</span>     <span class="o">-</span><span class="mf">1.163</span><span class="p">,</span>      <span class="mf">1.467</span><span class="p">,</span>      <span class="mf">0.503</span><span class="p">,</span>      <span class="mf">1.096</span><span class="p">,</span>     <span class="o">-</span><span class="mf">1.663</span><span class="p">,</span>
+     <span class="mf">0.192</span><span class="p">,</span>      <span class="mf">4.897</span><span class="p">,</span>     <span class="o">-</span><span class="mf">2.238</span><span class="p">,</span>     <span class="o">-</span><span class="mf">2.953</span><span class="p">,</span>      <span class="mf">6.324</span><span class="p">,</span>     <span class="o">-</span><span class="mf">3.999</span><span class="p">,</span>
+<span class="o">/</span>
+</pre></div>
+</div>
+<p>This section contain a <code class="docutils literal notranslate"><span class="pre">cv_type</span></code> keyword along with a string of <code class="docutils literal notranslate"><span class="pre">MULTI_RMSD</span></code> and a list of integers following
+<code class="docutils literal notranslate"><span class="pre">cv_i</span></code> keyword which represents the indexes of atoms and there is an extra number 0 at the end of the list.
+<code class="docutils literal notranslate"><span class="pre">cv_ni</span></code> is set to the number of the integers after <code class="docutils literal notranslate"><span class="pre">cv_i</span></code> keyword. The Cα atomic reference coordinates following
+<code class="docutils literal notranslate"><span class="pre">cv_r</span></code> keyword and the value of``cv_nr`` is set to three times the number of Cα atoms. The reference coordinates
+of Cα atoms are extracted from the pdb of native structure <a class="reference download internal" download="" href="../_downloads/2ed24b72710be2757d9e4321505948d6/1le1_2.pdb"><code class="xref download docutils literal notranslate"><span class="pre">&quot;1le1_2.pdb&quot;</span></code></a>.
+<code class="docutils literal notranslate"><span class="pre">cv_max</span></code> and <code class="docutils literal notranslate"><span class="pre">cv_min</span></code> defined the largest and smallest desired value of RMSD.</p>
+<p>The CV of radius of gyration is defined as follow:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">colvar</span>
+  <span class="n">cv_type</span> <span class="o">=</span> <span class="s1">&#39;R_OF_GYRATION&#39;</span>
+  <span class="n">cv_min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">cv_max</span> <span class="o">=</span> <span class="mi">20</span>
+  <span class="n">cv_ni</span><span class="o">=</span> <span class="mi">12</span>
+  <span class="n">cv_i</span> <span class="o">=</span>    <span class="mi">5</span><span class="p">,</span>   <span class="mi">16</span><span class="p">,</span>   <span class="mi">40</span><span class="p">,</span>   <span class="mi">54</span><span class="p">,</span>   <span class="mi">78</span><span class="p">,</span>   <span class="mi">93</span><span class="p">,</span>  <span class="mi">107</span><span class="p">,</span>  <span class="mi">114</span><span class="p">,</span>  <span class="mi">136</span><span class="p">,</span>  <span class="mi">160</span><span class="p">,</span>  <span class="mi">174</span><span class="p">,</span>  <span class="mi">198</span>
+<span class="o">/</span>
+</pre></div>
+</div>
+<p>This section contain a <code class="docutils literal notranslate"><span class="pre">cv_type</span></code> keyword along with a string of <code class="docutils literal notranslate"><span class="pre">R_OF_GYRATION</span></code> and a list of
+integers following <code class="docutils literal notranslate"><span class="pre">cv_i</span></code> keyword  which represents the indexes of atoms. For more information,
+please refer to AMBER18: <a class="reference external" href="https://ambermd.org/doc12/Amber18.pdf">https://ambermd.org/doc12/Amber18.pdf</a>.</p>
+<p>The input file of Mixing REMD is similar to the <a class="reference internal" href="Mixing_REMD_ALA_tutorial.html"><span class="doc">Mixing REMD with FSATOOL</span></a>. Here we provide
+a <a class="reference download internal" download="" href="../_downloads/4b0221bb1b25db71338595e9e31672d4/job.sh"><code class="xref download docutils literal notranslate"><span class="pre">job.sh</span></code></a> file for running the simulation.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">sbatch</span> <span class="n">job</span><span class="o">.</span><span class="n">sh</span>
+</pre></div>
+</div>
+<p>Now simulation was start. The total simulation time of each replicas is 2.2 μs. In this simulation, the collective coordinates
+of the replica are recorded to a trajectory file every 2 ps and its snapshot is recorded every 20 ps. It will take about two
+days to run this Mixing REMD. Because we want to analyze the trajectory at 300K, the trajectory file and information file of
+Mixing-REMD should be extracted and distribute among each temperature. You can download the trajectory and information files of
+REMD replicas at 300K by click <strong>:download:`Here &lt;....\files\trpzip2\REMD_at_300K.rar&gt;`</strong>.</p>
+</div>
+</div>
+<div class="section" id="markov-state-model-analysis">
+<h2>Markov State Model Analysis<a class="headerlink" href="#markov-state-model-analysis" title="Permalink to this headline">¶</a></h2>
+<p>Trajectory file at 300K contains lots of short trajectories of trpcage folding at 300K. We will perform Markov State Model
+analysis on these short trajectories and extract the dominant transition pathways from the folding network. All the necessary
+steps, including the clustering (k-means, k-medoids and k-centers), lumping (PCCA+), flux network construction
+and transition path building) are implemented in this MSM module of FSATOOL.</p>
+<div class="figure align-default" id="id2">
+<span id="fsatool-image"></span><a class="reference external image-reference" href="C:\Users\zhz\Pictures\sphinx\FSATOOL.tif"><img alt="../_images/FSATOOL.tif" src="../_images/FSATOOL.tif" /></a>
+<p class="caption"><span class="caption-text">The framework of FSATOOL.</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+</div>
+<p>We first perform the clustering and lumping step. The snapshots are clustered to 1000 microstates(<code class="docutils literal notranslate"><span class="pre">ncluster</span></code> = 1000) based
+on the Cartesian coordinates( <code class="docutils literal notranslate"><span class="pre">clustermethod</span></code> = .true. ) of the atoms by <strong>k-medoids</strong> . All these microstates are further
+lumped into 30 macrostates( <code class="docutils literal notranslate"><span class="pre">nstate</span></code> = 30 ) by <strong>PCCA+</strong> . The input file of MSM shows below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">msm</span>
+  <span class="n">ndim</span><span class="o">=</span><span class="mi">654</span><span class="p">,</span>
+  <span class="n">ncluster</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+  <span class="n">lagstep</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+  <span class="n">nstate</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+  <span class="n">ifreadcoor</span><span class="o">=.</span><span class="n">true</span><span class="o">.</span>
+  <span class="n">startstate</span> <span class="o">=</span><span class="mi">1</span>
+  <span class="n">endstate</span> <span class="o">=</span> <span class="mi">6</span>
+  <span class="n">clustermethod</span><span class="o">=</span><span class="s2">&quot;coordinate&quot;</span>
+<span class="o">/</span>
+
+<span class="o">&amp;</span><span class="n">trajs</span>
+  <span class="n">ncv</span> <span class="o">=</span>  <span class="mi">2</span>
+  <span class="n">kelvinarray</span><span class="o">=</span><span class="mi">300</span>
+  <span class="n">cvsfiles</span><span class="o">=</span><span class="s2">&quot;levelinfo_0.txt&quot;</span>
+  <span class="n">coorfiles</span><span class="o">=</span><span class="s2">&quot;../level_0.nc&quot;</span>
+  <span class="n">trajtype</span><span class="o">=</span><span class="mi">2</span>
+  <span class="n">framestride</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="o">/</span>
+</pre></div>
+</div>
+<p>The number of atoms in Trpzip2 is 218. When the <code class="docutils literal notranslate"><span class="pre">clustermethod</span></code> is “coordinates”, <code class="docutils literal notranslate"><span class="pre">ndim</span></code> must equal to atoms*3. <code class="docutils literal notranslate"><span class="pre">ifreadcoor</span></code> is
+set to “.true.” means the information of input files is set in `` &amp;traj `` namelist. There are two collection variables(<code class="docutils literal notranslate"><span class="pre">ncv</span></code> = 2) are
+output in the information file(“levelinfo_0.txt”). The snapshots are extracted from the trajectory at 300K(<code class="docutils literal notranslate"><span class="pre">kelvinarray</span></code> = 300).
+<code class="docutils literal notranslate"><span class="pre">framestride</span></code> is equal to <code class="docutils literal notranslate"><span class="pre">ntwx</span></code>/<code class="docutils literal notranslate"><span class="pre">ntpr</span></code> (snapshot output interval divided by CVs output interval). For more information, please
+refer to <a class="reference internal" href="../MSMmodule/msm.html"><span class="doc">MSM (Markov State Model)</span></a>.</p>
+<p>It will generate a folder named “info”. This folder contains the files about the clustering and lumping information.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">fsatool</span> <span class="n">msm</span>
+</pre></div>
+</div>
+<p>The lag step of building MSM is set to 10 is inaccurate. To validate markov state model, we should computing implied timescale along
+different lagtime :</p>
+<div class="math">
+<p><img src="../_images/math/a4c49d3859eba0468bc937a2d979a113718cd641.png" alt="t_i(\tau)=-\frac{\tau}{ln\lambda_i(\tau)}"/></p>
+</div><p>This module we should support input file for check :</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">check</span>
+  <span class="n">checkmethod</span><span class="o">=</span><span class="s2">&quot;timescales&quot;</span><span class="p">,</span>
+  <span class="n">datafile</span><span class="o">=</span><span class="s2">&quot;../info/cluster_forcheck.txt&quot;</span><span class="p">,</span>
+  <span class="n">nsnap</span><span class="o">=</span><span class="mi">112888</span><span class="p">,</span>
+  <span class="n">ncluster</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+  <span class="n">lagstart</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+  <span class="n">lagend</span><span class="o">=</span><span class="mi">50</span>
+<span class="o">/</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">datafile</span></code> indicates the path of “cluster_forcheck.txt” which is generate after running the MSM. <code class="docutils literal notranslate"><span class="pre">nsanp</span></code> is equal to the number
+of snapshots of “level_0.nc”. <code class="docutils literal notranslate"><span class="pre">lagstart</span></code> and <code class="docutils literal notranslate"><span class="pre">lagend</span></code> are the maximum and minimum steps for check respectively.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">fsatool</span> <span class="n">msm</span> <span class="n">check</span>
+</pre></div>
+</div>
+<p>The result of check is output in “check.out”. We can see the result by perform :</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">xmgrace</span> <span class="o">-</span><span class="n">nxy</span> <span class="n">check</span><span class="o">.</span><span class="n">out</span>
+</pre></div>
+</div>
+<div class="figure align-center" id="id3">
+<span id="check-image"></span><a class="reference external image-reference" href="C:\Users\zhz\Pictures\sphinx\check.png"><img alt="../_images/check.png" src="../_images/check.png" style="height: 400px;" /></a>
+<p class="caption"><span class="caption-text">The result of check.</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
+</div>
+<p>We can see that when the lag step is greater than 20, the implied timescale tends to be stable. So 30 is a good choice for lag step.
+We can execute MSM module again by modifying the <code class="docutils literal notranslate"><span class="pre">lagstep</span></code> from 10 to 30. And this process does not require re-clustering, so
+<code class="docutils literal notranslate"><span class="pre">ifreadcoor</span></code> is modified to “.false.”. The input file of MSM shows below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">msm</span>
+  <span class="n">ndim</span><span class="o">=</span><span class="mi">654</span><span class="p">,</span>
+  <span class="n">ncluster</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+  <span class="n">lagstep</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+  <span class="n">nstate</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+  <span class="n">ifreadcoor</span><span class="o">=.</span><span class="n">false</span><span class="o">.</span>
+  <span class="n">startstate</span> <span class="o">=</span><span class="mi">1</span>
+  <span class="n">endstate</span> <span class="o">=</span> <span class="mi">6</span>
+  <span class="n">clustermethod</span><span class="o">=</span><span class="s2">&quot;coordinate&quot;</span>
+<span class="o">/</span>
+
+<span class="o">&amp;</span><span class="n">trajs</span>
+  <span class="n">ncv</span> <span class="o">=</span>  <span class="mi">2</span>
+  <span class="n">kelvinarray</span><span class="o">=</span><span class="mi">300</span>
+  <span class="n">cvsfiles</span><span class="o">=</span><span class="s2">&quot;levelinfo_0.txt&quot;</span>
+  <span class="n">coorfiles</span><span class="o">=</span><span class="s2">&quot;../level_0.nc&quot;</span>
+  <span class="n">trajtype</span><span class="o">=</span><span class="mi">2</span>
+  <span class="n">framestride</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="o">/</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">fsatool</span> <span class="n">msm</span>
+</pre></div>
+</div>
+<p>Now we get reasonable clustering and lumping result. We can see the macrostates result by visiting the file “stateindex.txt” which
+is located in the “info” folder.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">30</span>      <span class="mi">1000</span>    <span class="mi">112888</span>
+   <span class="mi">1</span>         <span class="mi">1</span>         <span class="mi">1</span>       <span class="mi">194</span>       <span class="mi">359</span>     <span class="mi">56066</span>   <span class="mf">0.688</span>   <span class="mf">5.755</span>
+   <span class="mi">2</span>         <span class="mi">4</span>         <span class="mi">3</span>       <span class="mi">275</span>       <span class="mi">819</span>     <span class="mi">89992</span>   <span class="mf">4.616</span>   <span class="mf">5.693</span>
+   <span class="mi">3</span>         <span class="mi">7</span>         <span class="mi">3</span>       <span class="mi">220</span>       <span class="mi">998</span>     <span class="mi">47526</span>   <span class="mf">3.600</span>   <span class="mf">6.102</span>
+   <span class="mi">4</span>         <span class="mi">8</span>         <span class="mi">1</span>        <span class="mi">75</span>       <span class="mi">648</span>     <span class="mi">52290</span>   <span class="mf">6.241</span>   <span class="mf">6.729</span>
+   <span class="mi">5</span>         <span class="mi">9</span>         <span class="mi">1</span>       <span class="mi">114</span>       <span class="mi">391</span>     <span class="mi">67014</span>   <span class="mf">5.684</span>   <span class="mf">5.417</span>
+   <span class="mi">6</span>        <span class="mi">10</span>         <span class="mi">1</span>       <span class="mi">187</span>       <span class="mi">409</span>     <span class="mi">29249</span>   <span class="mf">4.483</span>   <span class="mf">5.592</span>
+   <span class="mi">7</span>        <span class="mi">11</span>         <span class="mi">1</span>       <span class="mi">202</span>        <span class="mi">47</span>     <span class="mi">93456</span>   <span class="mf">5.195</span>   <span class="mf">5.643</span>
+   <span class="mi">8</span>        <span class="mi">12</span>         <span class="mi">1</span>       <span class="mi">156</span>       <span class="mi">256</span>     <span class="mi">25789</span>   <span class="mf">6.772</span>   <span class="mf">6.291</span>
+   <span class="mi">9</span>        <span class="mi">14</span>         <span class="mi">2</span>       <span class="mi">276</span>       <span class="mi">454</span>     <span class="mi">27062</span>   <span class="mf">2.242</span>   <span class="mf">5.948</span>
+  <span class="mi">10</span>        <span class="mi">16</span>         <span class="mi">2</span>       <span class="mi">151</span>        <span class="mi">11</span>     <span class="mi">17626</span>   <span class="mf">5.958</span>   <span class="mf">5.618</span>
+  <span class="mi">11</span>        <span class="mi">19</span>         <span class="mi">3</span>       <span class="mi">283</span>       <span class="mi">759</span>     <span class="mi">23229</span>   <span class="mf">6.326</span>   <span class="mf">6.257</span>
+  <span class="mi">12</span>        <span class="mi">20</span>         <span class="mi">1</span>       <span class="mi">162</span>       <span class="mi">733</span>     <span class="mi">49635</span>   <span class="mf">5.992</span>   <span class="mf">6.214</span>
+  <span class="mi">13</span>        <span class="mi">22</span>         <span class="mi">2</span>       <span class="mi">229</span>        <span class="mi">61</span>      <span class="mi">2970</span>   <span class="mf">4.011</span>   <span class="mf">6.532</span>
+  <span class="mi">14</span>        <span class="mi">27</span>         <span class="mi">5</span>       <span class="mi">344</span>        <span class="mi">38</span>     <span class="mi">48346</span>   <span class="mf">6.912</span>   <span class="mf">6.133</span>
+  <span class="mi">15</span>        <span class="mi">28</span>         <span class="mi">1</span>       <span class="mi">122</span>       <span class="mi">242</span>     <span class="mi">57494</span>   <span class="mf">5.097</span>   <span class="mf">5.934</span>
+  <span class="mi">16</span>        <span class="mi">35</span>         <span class="mi">7</span>       <span class="mi">799</span>       <span class="mi">562</span>     <span class="mi">67455</span>   <span class="mf">6.027</span>   <span class="mf">7.160</span>
+  <span class="mi">17</span>        <span class="mi">38</span>         <span class="mi">3</span>       <span class="mi">461</span>       <span class="mi">458</span>     <span class="mi">66571</span>   <span class="mf">2.928</span>   <span class="mf">6.169</span>
+  <span class="mi">18</span>        <span class="mi">39</span>         <span class="mi">1</span>       <span class="mi">166</span>       <span class="mi">671</span>     <span class="mi">48676</span>   <span class="mf">2.815</span>   <span class="mf">5.435</span>
+  <span class="mi">19</span>        <span class="mi">43</span>         <span class="mi">4</span>       <span class="mi">809</span>       <span class="mi">667</span>      <span class="mi">5461</span>   <span class="mf">6.760</span>   <span class="mf">6.030</span>
+  <span class="mi">20</span>        <span class="mi">54</span>        <span class="mi">11</span>      <span class="mi">1735</span>       <span class="mi">396</span>     <span class="mi">63224</span>   <span class="mf">0.332</span>   <span class="mf">5.963</span>
+  <span class="mi">21</span>        <span class="mi">55</span>         <span class="mi">1</span>       <span class="mi">245</span>       <span class="mi">259</span>     <span class="mi">90940</span>   <span class="mf">4.111</span>   <span class="mf">6.121</span>
+  <span class="mi">22</span>        <span class="mi">56</span>         <span class="mi">1</span>       <span class="mi">269</span>       <span class="mi">916</span>     <span class="mi">91132</span>   <span class="mf">2.775</span>   <span class="mf">6.338</span>
+  <span class="mi">23</span>        <span class="mi">65</span>         <span class="mi">9</span>      <span class="mi">1530</span>       <span class="mi">183</span>     <span class="mi">31604</span>   <span class="mf">0.416</span>   <span class="mf">5.817</span>
+  <span class="mi">24</span>        <span class="mi">77</span>        <span class="mi">12</span>      <span class="mi">2459</span>        <span class="mi">18</span>    <span class="mi">110260</span>   <span class="mf">0.752</span>   <span class="mf">5.834</span>
+  <span class="mi">25</span>       <span class="mi">120</span>        <span class="mi">43</span>      <span class="mi">5580</span>       <span class="mi">380</span>     <span class="mi">76965</span>   <span class="mf">7.470</span>   <span class="mf">6.669</span>
+  <span class="mi">26</span>       <span class="mi">163</span>        <span class="mi">43</span>      <span class="mi">5167</span>        <span class="mi">10</span>     <span class="mi">79788</span>   <span class="mf">6.481</span>   <span class="mf">6.926</span>
+  <span class="mi">27</span>       <span class="mi">376</span>       <span class="mi">213</span>     <span class="mi">19959</span>        <span class="mi">15</span>     <span class="mi">29401</span>   <span class="mf">7.370</span>   <span class="mf">7.468</span>
+  <span class="mi">28</span>       <span class="mi">455</span>        <span class="mi">79</span>     <span class="mi">10408</span>       <span class="mi">133</span>     <span class="mi">11511</span>   <span class="mf">4.989</span>   <span class="mf">6.312</span>
+  <span class="mi">29</span>       <span class="mi">566</span>       <span class="mi">111</span>     <span class="mi">18025</span>       <span class="mi">842</span>     <span class="mi">74089</span>   <span class="mf">6.755</span>   <span class="mf">6.579</span>
+  <span class="mi">30</span>      <span class="mi">1000</span>       <span class="mi">434</span>     <span class="mi">42286</span>       <span class="mi">260</span>     <span class="mi">72401</span>   <span class="mf">7.222</span>   <span class="mf">7.992</span>
+</pre></div>
+</div>
+<p>You will see a text file similar to this result. Different times of execution may have different results,
+but it will not affect our subsequent analysis. The last two columns in this file respectively record the
+Cα-RMSD and radius of gyration of the central structure of each macrostate. To construct the folding path based on
+the transition path theory, we set the macrostate with the minimum Cα-RMSD(macrostates 20) as the folded state and
+the macrostates with Cα-RMSD more than 7.0 A(macrostates 25,27,30) as the unfolded states. The dominant transition
+pathways can be obtained by performing the TPT module :</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">fsatool</span> <span class="n">msm</span> <span class="n">tpt</span>
+</pre></div>
+</div>
+<p>The imput file of tpt shows below :</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">tpt</span>
+  <span class="n">tpmfile</span> <span class="o">=</span> <span class="s2">&quot;tpm.txt&quot;</span>
+  <span class="n">statefile</span> <span class="o">=</span> <span class="s2">&quot;states.txt&quot;</span>
+  <span class="n">startstate</span> <span class="o">=</span> <span class="mi">25</span><span class="p">,</span><span class="mi">27</span><span class="p">,</span><span class="mi">30</span>
+  <span class="n">endstate</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="o">/</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="visualization">
+<h2>Visualization<a class="headerlink" href="#visualization" title="Permalink to this headline">¶</a></h2>
+<p>We provide some simple scripts to show the representive structure in a cluster of structures. And show the
+transition pathway according to the flux after analyzing by the MSM module.</p>
+<p><a class="reference download internal" download="" href="../_downloads/8d5fcf4eba72c3bfe92c501f79a2055f/vmd_show.py"><code class="xref download docutils literal notranslate"><span class="pre">extract_structure.py</span></code></a>.</p>
+<p><a class="reference download internal" download="" href="../_downloads/871a2a27a6f4faa9cc96680accca6a83/vmd_show.rar"><code class="xref download docutils literal notranslate"><span class="pre">vmd_show.py</span></code></a>.</p>
+<p><a class="reference download internal" download="" href="../_downloads/f37b08afa6db176ff8968898060c2226/plot_network.py"><code class="xref download docutils literal notranslate"><span class="pre">plot_network.py</span></code></a>.</p>
+<div class="section" id="extract-representative-structure">
+<h3>Extract representative structure<a class="headerlink" href="#extract-representative-structure" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">python</span> <span class="n">extract_structure</span><span class="o">.</span><span class="n">py</span>
+</pre></div>
+</div>
+<p>It will extract the representative structure of each macrostate. It should be noted that the file path
+in the script needs to be changed according to its location. <code class="docutils literal notranslate"><span class="pre">interval</span></code> is equal to <code class="docutils literal notranslate"><span class="pre">framestride</span></code>
+in “msm.in”(snapshot output interval divided by CVs output interval). It will output all the snapshots
+contained in the microstate which at the center of each macrostate. For example, “state_07.nc” records the snapshots
+of microstate which at the center of macrostate 7.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">python</span> <span class="n">vmd_show</span><span class="o">.</span><span class="n">py</span> <span class="o">-</span><span class="n">p</span> <span class="n">trpzip2</span><span class="o">.</span><span class="n">prmtop</span> <span class="o">-</span><span class="n">t</span> <span class="n">state_07</span><span class="o">.</span><span class="n">nc</span>
+</pre></div>
+</div>
+<div class="figure align-center" id="id4">
+<span id="representative-image"></span><a class="reference external image-reference" href="C:\Users\zhz\Pictures\sphinx\representative.png"><img alt="../_images/representative.png" src="../_images/representative.png" style="height: 400px;" /></a>
+<p class="caption"><span class="caption-text">The representative structure of macrostate 7.</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
+</div>
+<p>Repeat this step, for each macrostate we take a representative structure diagram. For reference,
+<a class="reference download internal" download="" href="../_downloads/15df11ae9db87b69a3451b225bd56605/figures.rar"><code class="xref download docutils literal notranslate"><span class="pre">here</span></code></a> are the representative structure diagrams of all 30 macrostates.</p>
+</div>
+<div class="section" id="plot-flux-network">
+<h3>Plot flux network<a class="headerlink" href="#plot-flux-network" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">python</span> <span class="n">plot_network</span> <span class="o">-</span><span class="n">i</span> <span class="n">tpt</span><span class="o">.</span><span class="n">out</span>
+<span class="o">&gt;</span> <span class="n">dot</span> <span class="o">-</span><span class="n">Tpdf</span> <span class="n">file</span><span class="o">.</span><span class="n">dot</span> <span class="o">&gt;</span> <span class="n">network</span><span class="o">.</span><span class="n">pdf</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>the net flux file should be provided after <code class="docutils literal notranslate"><span class="pre">-i</span></code> argument. Default file name is “tpt.out”.</p></li>
+<li><p>the image directory should be provided after <code class="docutils literal notranslate"><span class="pre">-d</span></code> argument. Default directory is “.”.</p></li>
+<li><p>The output file should use the <code class="docutils literal notranslate"><span class="pre">dot</span></code> command to output the image.</p></li>
+</ul>
+<p>Now we have a PDF file that contains all the folding paths from the initial state to the final state.</p>
+<div class="figure align-default" id="id5">
+<a class="reference external image-reference" href="C:\Users\zhz\Pictures\sphinx\network.png"><img alt="../_images/network.png" src="../_images/network.png" /></a>
+<p class="caption"><span class="caption-text">All the folding paths from the initial state to the final state.</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
+</div>
+<p>As you see, this picture is too complicated ! It is difficult for us to obtain useful information from this picture.
+So we can abandon some small flux paths by modifying a parameter in “plot_network.py”.</p>
+<div class="figure align-center" id="id6">
+<a class="reference external image-reference" href="C:\Users\zhz\Pictures\sphinx\plot_network.png"><img alt="../_images/plot_network.png" src="../_images/plot_network.png" style="height: 250px;" /></a>
+<p class="caption"><span class="caption-text">Modify a parameter in “plot_network.py”.</span><a class="headerlink" href="#id6" title="Permalink to this image">¶</a></p>
+</div>
+<p>By reducing the total flux from 1 to 0.9603, we get a more concise folding path diagram.</p>
+<div class="figure align-default" id="id7">
+<a class="reference external image-reference" href="C:\Users\zhz\Pictures\sphinx\network_0.9603.png"><img alt="../_images/network_0.9603.png" src="../_images/network_0.9603.png" /></a>
+<p class="caption"><span class="caption-text">Major folding paths from the initial state to the final state.</span><a class="headerlink" href="#id7" title="Permalink to this image">¶</a></p>
+</div>
+<p>In Adobe Acrobat or other vector graphics editing software, we select the edit graphics command and delete some isolated
+states. Then adjusting the size of some arrows, and finally we can get a beautiful transition pathways map.</p>
+<div class="figure align-default" id="id8">
+<a class="reference external image-reference" href="C:\Users\zhz\Pictures\sphinx\final.png"><img alt="../_images/final.png" src="../_images/final.png" /></a>
+<p class="caption"><span class="caption-text">The final transition pathways map.</span><a class="headerlink" href="#id8" title="Permalink to this image">¶</a></p>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="SMD_tutorial.html" class="btn btn-neutral float-right" title="Free energy calculation from SMD" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="Mixing_REMD_ALA_tutorial.html" class="btn btn-neutral float-left" title="Mixing REMD with FSATOOL" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2019, FSATOOL Group
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

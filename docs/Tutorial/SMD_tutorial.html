@@ -1,0 +1,322 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Free energy calculation from SMD &mdash; FSATOOL 1.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Reference" href="../Reference.html" />
+    <link rel="prev" title="Simulate a Small Peptide and analyze the datas by FSATOOL" href="Mixing_REMD_TRPCAGE_tutorial.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> FSATOOL
+          
+
+          
+            
+            <img src="../_static/fsatool_logo.jpg" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../Installation.html">Installation</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../SamplingModule/index.html">Sampling module</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../MSMmodule/index.html">MSM module</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../Extractmodule.html">Extract trajectory module</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../Visualization.html">Visualization</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Tutorial</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="Mixing_REMD_ALA_tutorial.html">Mixing REMD with FSATOOL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Mixing_REMD_TRPCAGE_tutorial.html">Simulate a Small Peptide and analyze the datas by FSATOOL</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Free energy calculation from SMD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#aim">Aim</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#introduction">Introduction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pre-prepared-files">Pre-prepared files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#prepare-the-input-file">Prepare the input file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#analyze-the-md-results">Analyze the MD results</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../Reference.html">Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">FSATOOL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="index.html">Tutorial</a> &raquo;</li>
+        
+      <li>Free energy calculation from SMD</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/Tutorial/SMD_tutorial.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="free-energy-calculation-from-smd">
+<h1>Free energy calculation from SMD<a class="headerlink" href="#free-energy-calculation-from-smd" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="aim">
+<h2>Aim<a class="headerlink" href="#aim" title="Permalink to this headline">¶</a></h2>
+<p>The purpose of this tutorial is to calculation of free energies from steered molecular dynamics simulations(SMD).
+The helix-coil transition of decaalanine, which is relevant to protein folding, is used as an exemplary system.</p>
+</div>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>In this section, we will simulate helix-coil transition of deca-alanine in implicit solvent with SMD and calculate its folding
+free energy. Deca-alanine is an oligopeptide composed of ten alanine residues. In solvent at room temperature, the stable
+configuration of deca-alanine is an α-helix. Stretching the molecule by an external force can induce its transition to an
+extended form(coil). This helix-coil transition represents a simple but basic folding system, hence constituting an interesting
+problem. We calculate the PMF <img class="math" src="../_images/math/7650890fa61cfa5b68b55a8f46017ee73df4a12c.png" alt="\Phi(\xi)"/> of the molecule with respect to the end-to-end distance <img class="math" src="../_images/math/4b0fcdf5bbee5b94367e76452870b31d7c74f348.png" alt="\xi"/> of the molecule.</p>
+<div class="figure align-center" id="id1">
+<a class="reference external image-reference" href="C:\Users\zhz\Pictures\sphinx\ala_10\ala.png"><img alt="../_images/ala1.png" src="../_images/ala1.png" /></a>
+<p class="caption"><span class="caption-text">The cartoon of deca-alanine.</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
+</div>
+<p>In the simulation, we fix one end of the molecule (the N atom of the first residue) at the origin and constrain the other
+end (the capping N atom at the C-terminus) to stretch the molecule. A guiding potential <img class="math" src="../_images/math/66eb272d014dbf13e81d4cfef50e09de7dc97fb2.png" alt="h(\textup{r};\lambda)=(k/2)
+[\xi(\textup{r})-\lambda]^2"/>.</p>
+</div>
+<div class="section" id="pre-prepared-files">
+<h2>Pre-prepared files<a class="headerlink" href="#pre-prepared-files" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>The prmtop file of deca-alanine <a class="reference download internal" download="" href="../_downloads/2f77d6a4964b9f803847e755f6ae2813/ala.top"><code class="xref download docutils literal notranslate"><span class="pre">&quot;1le1_2.pdb&quot;</span></code></a>.</p></li>
+<li><p>The coordinates file of deca-alanine <a class="reference download internal" download="" href="../_downloads/4fe3d87439584285b89ef45392fcd86b/ala.rst"><code class="xref download docutils literal notranslate"><span class="pre">&quot;1le1_2.pdb&quot;</span></code></a>.</p></li>
+</ul>
+</div>
+<div class="section" id="prepare-the-input-file">
+<h2>Prepare the input file<a class="headerlink" href="#prepare-the-input-file" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">task</span>
+ <span class="n">ifsmd</span><span class="o">=.</span><span class="n">true</span><span class="o">.</span>
+<span class="o">/</span>
+</pre></div>
+</div>
+<p>This section means we will perform steered molecular dynamics simulations.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">smd</span>
+  <span class="n">smdleadcv</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">smdrelaxstep</span><span class="o">=</span><span class="mi">5000000</span><span class="p">,</span> <span class="n">reversefrag</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">smdspeed</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+  <span class="n">smdinicv</span><span class="o">=</span><span class="mf">13.1</span><span class="p">,</span> <span class="n">smdendcv</span><span class="o">=</span><span class="mf">35.1</span>
+  <span class="n">smdk</span><span class="o">=</span><span class="mf">50.0</span><span class="p">,</span> <span class="n">smdpathfrag</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">smdnpath</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">smdweightfreq</span><span class="o">=</span><span class="mi">1000</span>
+<span class="o">/</span>
+
+<span class="o">&amp;</span><span class="n">fsacolvar</span>
+  <span class="n">cv_type</span> <span class="o">=</span> <span class="s1">&#39;COM_DIS&#39;</span><span class="p">,</span> <span class="n">cv_i</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">107</span><span class="p">,</span> <span class="n">cv_r</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span>
+<span class="o">/</span>
+</pre></div>
+</div>
+<p>Namelist <strong>fsacolvar</strong> defined a collective variable which is the distance between the N atom of the first residue(atom index is 7)
+and the capping N atom at the C-terminus(atom index is 107).</p>
+<p>Namelist <strong>smd</strong> includes the parameters for smd. <code class="docutils literal notranslate"><span class="pre">smdleadcv=1</span></code> means there are only one collective variable(CV) is used to
+pull the molecule. Before SMD
+we will relax the initial structrue by performing 5000000 steps MD(<code class="docutils literal notranslate"><span class="pre">smdrelaxstep=5000000</span></code>. We will stretch the molecule only
+from helix to extended form (<code class="docutils literal notranslate"><span class="pre">reversefrag=0</span></code>). A pulling speed of 0.2 Å/ns(<code class="docutils literal notranslate"><span class="pre">smdspeed=0.2</span></code>) and A force constant of k=50
+<img class="math" src="../_images/math/f68478b670d38dc7a6122e956e12a75a95013969.png" alt="kcal/(mol*\AA^2)"/> (<code class="docutils literal notranslate"><span class="pre">smdk=50</span></code>) is used. The end-to-end distance changed between 13.1(<code class="docutils literal notranslate"><span class="pre">smdinicv=13.1</span></code>) and
+35.1 Å(<code class="docutils literal notranslate"><span class="pre">smdendcv=35.1</span></code>) with various constant velocities. There are 100 discrete states in the pulling process(smdpathfrag=100).</p>
+</div>
+<div class="section" id="analyze-the-md-results">
+<h2>Analyze the MD results<a class="headerlink" href="#analyze-the-md-results" title="Permalink to this headline">¶</a></h2>
+<div class="figure align-center" id="id2">
+<a class="reference external image-reference" href="C:\Users\zhz\Pictures\sphinx\ala_10\end_to_end.png"><img alt="../_images/end_to_end.png" src="../_images/end_to_end.png" style="width: 460.8px; height: 326.8px;" /></a>
+<p class="caption"><span class="caption-text">Change of end-to-end distance over time.</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+</div>
+<div class="figure align-center" id="id3">
+<a class="reference external image-reference" href="C:\Users\zhz\Pictures\sphinx\ala_10\pulling_force.png"><img alt="../_images/pulling_force.png" src="../_images/pulling_force.png" style="width: 468.8px; height: 326.40000000000003px;" /></a>
+<p class="caption"><span class="caption-text">Change of pulling_force over time.</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
+</div>
+<div class="figure align-center" id="id4">
+<a class="reference external image-reference" href="C:\Users\zhz\Pictures\sphinx\ala_10\PMF.png"><img alt="../_images/PMF.png" src="../_images/PMF.png" style="width: 466.8px; height: 324.0px;" /></a>
+<p class="caption"><span class="caption-text">PMF calculated from SMD (v=0.2 Å/ns).</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../Reference.html" class="btn btn-neutral float-right" title="Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="Mixing_REMD_TRPCAGE_tutorial.html" class="btn btn-neutral float-left" title="Simulate a Small Peptide and analyze the datas by FSATOOL" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2019, FSATOOL Group
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

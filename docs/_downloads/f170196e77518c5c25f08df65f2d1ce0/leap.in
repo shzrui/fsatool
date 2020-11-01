@@ -1,0 +1,6 @@
+source leaprc.protein.ff14SB
+set default PBRadii mbondi3
+mol = sequence { NSER TRP THR TRP GLU ASN GLY LYS TRP THR TRP CLYS } 
+check mol
+saveamberparm mol trpzip2.top trpzip2.crd
+quit

@@ -1,0 +1,102 @@
+Free energy calculation from SMD
+####################################
+
+Aim
+=========
+The purpose of this tutorial is to calculation of free energies from steered molecular dynamics simulations(SMD).
+The helix-coil transition of decaalanine, which is relevant to protein folding, is used as an exemplary system.
+
+Introduction
+================
+In this section, we will simulate helix-coil transition of deca-alanine in implicit solvent with SMD and calculate its folding 
+free energy. Deca-alanine is an oligopeptide composed of ten alanine residues. In solvent at room temperature, the stable
+configuration of deca-alanine is an α-helix. Stretching the molecule by an external force can induce its transition to an 
+extended form(coil). This helix-coil transition represents a simple but basic folding system, hence constituting an interesting 
+problem. We calculate the PMF :math:`\Phi(\xi)` of the molecule with respect to the end-to-end distance :math:`\xi` of the molecule.
+
+.. figure:: C:\\Users\\zhz\\Pictures\\sphinx\\ala_10\\ala.png
+   :target: C:\\Users\\zhz\\Pictures\\sphinx\\ala_10\\ala.png
+   :align: center
+
+   The cartoon of deca-alanine.
+
+
+In the simulation, we fix one end of the molecule (the N atom of the first residue) at the origin and constrain the other
+end (the capping N atom at the C-terminus) to stretch the molecule. A guiding potential :math:`h(\textup{r};\lambda)=(k/2)
+[\xi(\textup{r})-\lambda]^2`.
+
+Pre-prepared files
+=======================
+* The prmtop file of deca-alanine :download:`"1le1_2.pdb"<C:\\Users\\zhz\\Desktop\\sphinx\\files\\ala_10\\ala.top>`.
+
+* The coordinates file of deca-alanine :download:`"1le1_2.pdb"<C:\\Users\\zhz\\Desktop\\sphinx\\files\\ala_10\\ala.rst>`.
+
+Prepare the input file
+==========================
+::
+    
+    &task
+     ifsmd=.true.
+    /
+
+This section means we will perform steered molecular dynamics simulations.
+
+::
+
+    &smd
+      smdleadcv=1, smdrelaxstep=5000000, reversefrag=0, smdspeed=0.2,
+      smdinicv=13.1, smdendcv=35.1
+      smdk=50.0, smdpathfrag=100, smdnpath=1, smdweightfreq=1000
+    /
+
+    &fsacolvar
+      cv_type = 'COM_DIS', cv_i=7, 0, 107, cv_r=1.0, 1.0, 1.0
+    /
+
+Namelist **fsacolvar** defined a collective variable which is the distance between the N atom of the first residue(atom index is 7)
+and the capping N atom at the C-terminus(atom index is 107).
+
+Namelist **smd** includes the parameters for smd. ``smdleadcv=1`` means there are only one collective variable(CV) is used to 
+pull the molecule. Before SMD 
+we will relax the initial structrue by performing 5000000 steps MD(``smdrelaxstep=5000000``. We will stretch the molecule only 
+from helix to extended form (``reversefrag=0``). A pulling speed of 0.2 Å/ns(``smdspeed=0.2``) and A force constant of k=50 
+:math:`kcal/(mol*\AA^2)` (``smdk=50``) is used. The end-to-end distance changed between 13.1(``smdinicv=13.1``) and 
+35.1 Å(``smdendcv=35.1``) with various constant velocities. There are 100 discrete states in the pulling process(smdpathfrag=100).
+
+Analyze the MD results 
+==============================
+.. figure:: C:\\Users\\zhz\\Pictures\\sphinx\\ala_10\\end_to_end.png
+   :target: C:\\Users\\zhz\\Pictures\\sphinx\\ala_10\\end_to_end.png
+   :align: center
+   :scale: 40%
+
+   Change of end-to-end distance over time.
+
+.. figure:: C:\\Users\\zhz\\Pictures\\sphinx\\ala_10\\pulling_force.png
+   :target: C:\\Users\\zhz\\Pictures\\sphinx\\ala_10\\pulling_force.png
+   :align: center
+   :scale: 40%
+
+   Change of pulling_force over time.
+
+
+.. figure:: C:\\Users\\zhz\\Pictures\\sphinx\\ala_10\\PMF.png
+   :target: C:\\Users\\zhz\\Pictures\\sphinx\\ala_10\\PMF.png
+   :align: center
+   :scale: 40%
+
+   PMF calculated from SMD (v=0.2 Å/ns).
+
+
+
+
+
+
+
+
+
+
+
+
+
+

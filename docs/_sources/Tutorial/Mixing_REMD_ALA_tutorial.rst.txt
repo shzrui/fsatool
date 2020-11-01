@@ -1,0 +1,291 @@
+Mixing REMD with FSATOOL
+###############################
+
+Aim
+=========
+The aim of this tutorial is to train users to perform **Mixing REMD** simulation with FSATOOL.
+
+Introduction
+================
+
+Mixing REMD is an acceleration strategy which can sample the data as fast as a biased simulation and it processes the
+data as simple as an unbiased simulation. The system is constituted of three kinds of replicas, namely, **biased replicas**, 
+**equilibrium replicas**, and unbiased **REMD replicas**, respectively. Biased replicas are responsible for fast search in the
+collective variables( **CVs** ) space. They are simulated with the biasing potential. In Mixing REMD, the potential is built by the 
+Adaptively Biased Molecular Dynamics( **ABMD** ) method. :cite:`Babin2008` 
+
+ABMD applies a time-dependent biasing potential in the simulation. The ABMD method is formulated in terms of the following
+set of equations:
+
+.. math::
+
+  m_a\frac{\mathrm{d}^2\textup{r}_a}{\mathrm{d}t^2}=\textup{F}_a-\frac{\partial}{\partial \textup{r}_a}U[t|\sigma(\textup{r}_1,
+  \dots,\textup{r}_N)],\quad (1)
+
+
+
+  \frac{\partial{U}(t|\xi)}{\partial{t}}=\frac{k_BT}{\tau_F}G[\xi-\sigma(\textup{r}_1,\dots,\textup{r}_N)],\quad (2)
+
+where the first set represents Newton’s equations that govern ordinary MD augmented with the additional force coming
+from the time-dependent biasing potential :math:`U(t|\xi)` [with :math:`U(t=0|\xi)=0`, whose time evolution is given by the second
+equation. :math:`\xi` is the collective variable which is selected for fast sampling and the :math:`\tau_F` is refer to flooding time.
+:math:`G(\xi)` is a kernel function which can be perceived as a smoothed Dirac delta function. :cite:`Babin2008` As a function of a set of 
+collective variables, the biasing potential flattens the basins and barriers on the original free energy landscape gradually in the 
+simulation. This greatly increases the sampling efficiency of a molecule in the collective variable space.
+
+To obtain unbiased data in the canonical ensemble, the instantaneous state variables of the biased replicas are copied to the equilibrium 
+replicas periodically and further simulated for a short time period. In the short equilibrium simulation, biasing potentials are removed. 
+Then, the state variables of the equilibrium replicas are accepted or rejected by the REMD replicas at the same temperatures according to the
+Metropolis criterion. :cite:`Zhang2020`
+
+.. math::
+
+  P=min\{1,exp(-(V(r')-V(r))/k_BT)\},\quad (3)
+
+Here, P is the probability function for acceptance. V( **r**' ) and V( **r** ) are the potential energies of an equilibrium replica and a
+REMD replica, respectively. T is the environment temperature. If we look at the REMD replica, it just undergoes a state transition
+process as a standard Monte Carlo move.
+
+Different from the biased replicas, the unbiased REMD replicas are designed for the production of the unbiased sampling data. 
+These data allow us to construct the original free energy landscape on different collective variables. The schematic diafram for Mixing 
+REMD method is shown in the figure below:
+
+.. _mixing_image:
+
+.. figure:: C:\\Users\\zhz\\Pictures\\sphinx\\mixing.png
+  :target: C:\\Users\\zhz\\Pictures\\sphinx\\mixing.png
+
+  The schematic diafram for Mixing REMD method
+
+We will perform Mixing REMD simlation with FSATOOL for a small short peptide, Alanine dipeptide( **Ala** ), 
+in implicit solvent in this tutorail. The sequence is acetyl (ACE)-ALA-N-methyl (NME). The free energy
+landscape of this molecule is simple and it has been studied extensively. Two collective variables: backbone
+dihedral **Φ** and **Ψ**, are good indicators of the different states of Ala.
+
+.. _Ala_image:
+
+.. figure:: C:\\Users\\zhz\\Pictures\\sphinx\\ala.png
+   :target: C:\\Users\\zhz\\Pictures\\sphinx\\ala.png
+
+   The picture of Alanine dipeptide.
+
+Pre-prepared files
+=======================
+To start this tutorial, we need a **prmtop** file and a **coordinates** file. You can use the **Leap** program in AMBER to
+generate them ( If you have any questions, you can refer to the AMBER 
+tutorial: http://ambermd.org/tutorials/basic/tutorial0/index.htm ), or click
+:download:`ala.top <..\\..\\files\\ala.top>` :download:`ala.rst <..\\..\\files\\ala.rst>` to download the files.
+
+Prepare the input file
+==========================
+
+Collective variables
+------------------------
+
+In Mixing REMD, We will perform ABMD for fast sampling in the CVs space .
+Here we choose the backbone dihedral ( **Φ** and **Ψ** ) as the CVs. 
+The CVs are defined in the ``colvar`` namelist in AMBER. The CV of **Φ** is defined as follow :
+::
+
+    &colvar
+      cv_type = 'TORSION'
+      cv_min=-3.2, cv_max=3.2
+      cv_ni = 4
+      cv_i= 5, 7, 9, 15         ! Φ
+    /
+
+
+This section contain a ``cv_type`` keyword along with a string of ``TORSION`` and a list of 
+integers following ``cv_i`` keyword  which represents the indexes of atoms (the number of integers
+is defined by ``cv_ni``) . It will calculat that dihedral angle (in radians) formed by atoms with 
+indexes 5, 7, 9 and 15 which is called **Φ** here. ``cv_max`` and ``cv_min`` defined the largest and smallest desired 
+value of CVs. For more information, please refer to AMBER18: https://ambermd.org/doc12/Amber18.pdf 
+
+Similarly, the CV of **Ψ** is defined as follow :
+::
+
+    &colvar
+      cv_type = 'TORSION'
+      cv_min=-3.2, cv_max=3.2
+      cv_ni = 4
+      cv_i=  7, 9, 15, 17       ! Ψ
+    /
+
+Necessary Parameters
+------------------------
+::
+
+    &task
+      ifflood=.true.
+    /
+
+This section represents that we will perform Mixing REMD.
+
+::
+
+    &cntrl
+     imin=0, ntb=0, igb=8, ntpr=1000, ntwr=10000, ntwx=10000
+     ntt=3, tempi = 300.0, temp0 = 300.0, ig=-1, gamma_ln=1.0
+     ntf=2, ntc=2, nstlim=100000000, dt=0.002, cut=999.0
+    /
+
+This section includes several settings for **regular molecular dynamics** sampling. We performed simlation with 
+implicit solvent which is represented by the generalized Born model(``igb=8``). It will print the potential energy and CVs 
+which are defined in the input file to *"procinfo/procinfo_\*txt"* every 1000 steps(``ntpr=1000``). It will 
+save the trajectory snapshots as *"procinfo/traj_\*.nc"* every 10000 steps(``ntwx=10000``). And each of the replicas will perform 
+100000000 MD steps(``nstlim=100000000``) in this simulation.
+
+::
+
+    &flood
+      kelvindown=300.0, kelvinup=700.0, exchangestep=500000, biasrep=1, biasexc=1
+      ss2cv=1,2, ssngrid=60, 60, floodingtime=10.0
+    /
+
+This section includes several settings for Mixing REMD. We will set several replics at different temperatures in REMD replicas.
+The number of REMD replicas is determined by the number of gpu allocated. In this tutorial, there are 5 GPUs allocated. So FSATOOL will 
+assign 3 GPUs to 3 REMD replicas (the other two are assigned to biased replica and equilibrium replica) automatically between 
+300 *K* (``kelvindown=300``) to 700 *K* (``kelvinup=700``). The exchange step between equilibrium replica and the highest temperature replica
+in REMD replicas is set to 500000 steps(``exchangestep=500000``). The exchange step between biased replica and equilibrium replica is set to 
+500000 steps too(``exchangestep=500000`` * ``biasexc=1``).  The resolution of collective variable space for the biased replica is 60 * 60
+(``ssngrid=60, 60``). The other parameters of **Mixing REMD** can see :doc:`../SamplingModule/Mixing_REMD`. 
+
+Now we have prepared all the information for input file. We should submit this task to GPUs for running. Here we provide
+a :download:`job.sh <..\\..\\files\\job.sh>` file for submitting this task. 
+
+Running the simulation
+==============================
+We have prepared three files for running the simulation: :download:`ala.top <..\\..\\files\\ala.top>` 
+:download:`ala.rst <..\\..\\files\\ala.rst>` and :download:`job.sh <..\\..\\files\\job.sh>`. Now we can submit this task by
+typing:
+
+::
+
+    >sbatch job.sh
+
+Now simulation was start. It will take several hours to run this Mixing REMD. You can download 
+the output files by click **:download:`Here <..\\..\\files\\output_filefiles.rar>`**.
+
+Analyze the MD results 
+==============================
+After the simulation, we will get 5 information files named ``"procinfo_[0-4].txt"``, 5 trajectory files named
+``"traj_[0-4].mdcrd"``, 5 collective variable surface files named ``"surfacedata_[0-4].txt"`` and a ``"kelvin_exchangerate.txt"``
+file which recorded the exchange rate between each replica. For this simulation, the files with serial 
+numbers "0-2" correspond to REMD replicas from the lowest to the highest temperature respectively. The file with 
+serial number "3" corresponds to the equilibrium replica and the file with serial number "4" corresponds to the biased replica.
+
+Output File Format
+-------------------
+
+- *procinfo/procinfo_0.txt*
+
+The information file for each replica
+
+=====   =============  ===========  =============  ============
+time    process index   potential   CV1( **Φ** )   CV2( **Ψ** )
+=====   =============  ===========  =============  ============
+0.002    0             -23.547       -2.585           2.897
+0.004    0             -26.371       -1.425           2.551
+0.006    0             -22.924       -1.635           2.444
+0.008    0             -23.305       -1.379           2.969
+0.010    0             -22.960       -2.848           2.701
+...     ...             ...         ...
+=====   =============  ===========  =============  ============
+
+
+- *procinfo/traj_[0-4].mdcrd*
+
+The trajectory file for each replica
+
+- *procinfo/surfacedata_4.txt*
+
+The adaptive biasing potential of biased replica
+
+- *procinfo/kelvin_exchangerate.txt*
+
+The exchange rate between each replica
+
+The output data of Mixing-REMD sampling is collected from each replica. When the exchange happens, 
+the temperature at each replica is swapped. If we want to analyze the trajectory in each temperature, 
+the trajectory file and information file of Mixing-REMD should be extracted and distribute among
+each temperature. 
+
+
+Extract trajectory and information files
+-------------------------------------------
+The extract module of FSATOOL can extract the trajectory and information files in each temperature from 
+Mixing REMD output files automatically. We should provide a input file named ``"extract.in"``.
+
+::
+
+    &trajs
+      num_file = 5
+      procFile = "../procinfo_0.txt", "../procinfo_1.txt",
+                 "../procinfo_2.txt", "../procinfo_3.txt", "../procinfo_4.txt"
+      ncv = 2
+      trajFile = "../traj_0.mdcrd", "../traj_1.mdcrd",
+                  "../traj_2.mdcrd", "../traj_3.mdcrd", "../traj_4.mdcrd"
+    /
+
+The total number of trajectory or information files is 5(``num_file=5``) and the number of collective variables 
+in the “procinfo” file is 2(``ncv=2``). ``procFile`` and ``trajFile`` list the name of each trajectory and information files.
+The output process file name is “levelinfo_0.txt” which has same format of “procinfo_0.txt”. The output trajectory file name 
+is “level_0.nc” which has same format of “traj_0.mdcrd”
+
+The changes of the CVs 
+--------------------------
+Plot these properties through the simulation using the following commands.
+
+::
+
+  > xmgrace -block levelinfo_0.txt -bxy 1:5
+  > xmgrace -block levelinfo_0.txt -bxy 1:6
+
+
+.. _Φ_image:
+
+.. figure:: C:\\Users\\zhz\\Pictures\\sphinx\\Φ.png
+   :target: C:\\Users\\zhz\\Pictures\\sphinx\\Φ.png
+
+   The Φ of Alanine dipeptide
+
+Free energy of unbiased replicas
+-------------------------------------
+
+You can plot the free energy landscape of Alanine dipeptide at 300K by using a CPPTRAJ 
+scripy :download:`cpptraj.log <..\\..\\files\\cpptraj.log>`.
+
+::
+
+  > cppytraj -i cpptraj.log -d levelinfo_0.txt
+  > gnuplot free.gnu 
+
+.. figure:: C:\\Users\\zhz\\Pictures\\sphinx\\free_energy.png
+   :target: C:\\Users\\zhz\\Pictures\\sphinx\\free_energy.png
+
+   The free_energy landscape of Alanine dipeptide at 300K.
+
+Adaptive biasing potential of biased replica
+------------------------------------------------
+
+You can plot the adaptive biasing potential of biased replica by using a python 
+scripy :download:`plot_surfacedata.py <..\\..\\files\\plot_surfacedata.py>`.
+
+::
+
+  >python plot_surfacedata.py surfacedata_4.txt 60 60  
+
+The two parameters with a value of 60 are consistent with the previous setting of "ssngrid" in "&flood" section(``ssngrid=60``).
+
+.. figure:: C:\\Users\\zhz\\Pictures\\sphinx\\surfacedata.png
+   :target: C:\\Users\\zhz\\Pictures\\sphinx\\surfacedata.png
+
+   The adaptive biasing potential of biased replica.
+
+
+
+
+ 
+
+
+
